@@ -44,4 +44,13 @@ usable zoom reduction levels; sparse fixtures make `zoomLevelForScale` return nu
 | `GCA_009914755.4.chromAlias.bb` | `CP068254.1` etc. | Real chromAlias bigBed (from repo) |
 | `chr21.refseq.bb` | `chr21` | Direct-match fixture (from repo) |
 
+## Committed fixture manifest (test/data/bam)
+
+| Fixture | Chromosome names | Purpose |
+|---|---|---|
+| `chr_name_cap.sam/.bam/.bai` | `Chr1` (capital C) + `chr10..chrY`, `chrM` | BAM case-mismatch: genome canonical `chr1` vs header `Chr1`; reads on Chr1 ~24376181..24376217 |
+
+Used by `AlignmentDataManagerTest.testBamChrNameCapitalizationResolution` (end-to-end query via
+ChromAliasManager) and `testBamChrNameCanonicalizationOnRead` (reader-level canonicalization).
+
 Regeneration scripts: `/tmp/make_fixtures.py` (kept out of git; regenerable).

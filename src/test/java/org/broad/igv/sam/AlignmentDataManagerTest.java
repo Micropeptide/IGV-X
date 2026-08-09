@@ -95,6 +95,62 @@ public class AlignmentDataManagerTest extends AbstractHeadlessTest {
     }
 
     /**
+     * IGV-X regression: BAM whose header names its primary chromosome Chr1 (capital C,
+     * as in many published files) queried with the genome's canonical name chr1
+     * (lowercase, as hg/UCSC exposes).  The AlignmentDataManager query path must map the
+     * genome canonical name onto the BAM's actual sequence name through the alias layer
+     * (ChromAliasManager lowercases the BAM's sequence names), and every read returned
+     * must land on the genome canonical name chr1 via SAMAlignment canonicalization.
+     * Before the IGV-X chromosome-resolution hardening this silently returned zero
+     * alignments; it must never NPE and never lose the reads.
+     */
+    @Test
+    public void testBamChrNameCapitalizationResolution() throws IOException {
+        // Fixture: test/data/bam/chr_name_cap.sam/.bam/.bai — header has Chr1 (capital C)
+        // plus chr10..chrY/chrM (lowercase).  Reads are on Chr1 around 24376181..24376217.
+        String testFile = TestUtils.DATA_DIR + "bam/chr_name_cap.bam";
+        String sequence = "chr1";   // genome canonical (lowercase), BAM header has Chr1
+        int start = 24376000;
+        int end = 24377000;
+
+        genome = TestUtils.mockUCSCGenome();   // canonical chr1..chr22, chrX/Y/M (lowercase)
+        AlignmentDataManager manager = new AlignmentDataManager(new ResourceLocator(testFile), genome);
+        AlignmentInterval interval = loadInterval(manager, sequence, start, end);
+        List<Alignment> result = new ArrayList();
+        Iterator<Alignment> alignmentIterator = interval.getAlignmentIterator();
+        while (alignmentIterator.hasNext()) {
+            result.add(alignmentIterator.next());
+        }
+        Assert.assertTrue("expected reads on chr1 via case-insensitive BAM resolution", result.size() > 0);
+        for (Alignment a : result) {
+            Assert.assertEquals("alignment must be canonicalized to chr1", "chr1", a.getChr());
+        }
+    }
+
+    /**
+     * IGV-X regression at the reader level: reading the same Chr1-capital BAM must
+     * canonicalize every alignment onto the genome's chr1 (lowercase) even when the
+     * query uses the BAM's own sequence name.  Guards the SAMAlignment canonicalization
+     * path independent of the AlignmentDataManager alias layer.
+     */
+    @Test
+    public void testBamChrNameCanonicalizationOnRead() throws IOException {
+        String testFile = TestUtils.DATA_DIR + "bam/chr_name_cap.bam";
+        genome = TestUtils.mockUCSCGenome();
+        AlignmentReader reader = AlignmentReaderFactory.getReader(new ResourceLocator(testFile));
+        CloseableIterator<Alignment> iter = reader.query("Chr1", 24376000, 24377000, false);
+        int count = 0;
+        while (iter.hasNext()) {
+            Alignment a = iter.next();
+            Assert.assertEquals("read from Chr1 must canonicalize to chr1", "chr1", a.getChr());
+            count++;
+        }
+        iter.close();
+        reader.close();
+        Assert.assertTrue("expected reads when querying the BAM's own Chr1 name", count > 0);
+    }
+
+    /**
      * Test of query method, of class AlignmentIntervalLoader.  The test compares
      * the results of AlignmentIntervalLoader  with an AlignmentReader.
      * <p/>
