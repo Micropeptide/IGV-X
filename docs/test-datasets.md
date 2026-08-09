@@ -28,3 +28,20 @@ Planned download set — diverse organisms, different naming conventions:
 - **Sessions**: the repo has `test/sessions/100_bigwigs.xml` (large-session stress test).
 
 See `tests/` (the reproducible compatibility suite) for the exact manifest and downloader.
+
+## Committed fixture manifest (test/data/bb)
+
+Synthetic fixtures generated with pyBigWig (Python 3.13; `validate=False` for addEntries) and committed
+for regression tests. Rich multi-interval data (>=200 intervals/chrom) is required so pyBigWig writes
+usable zoom reduction levels; sparse fixtures make `zoomLevelForScale` return null at real scales.
+
+| Fixture | Chromosome names | Purpose |
+|---|---|---|
+| `tair10_chr_case.bigWig` | `Chr1..ChrM` (capital C/M) | Original NPE repro: genome exposes `chr1`/`NC_*` |
+| `tair10_refseq.bigWig` | `NC_003070.9` .. `NC_037304.1` | RefSeq-accession file vs canonical genome names |
+| `tair10_organellar_case.bigWig` | `Chr1..Chr5`, `ChrC`, `ChrM` | Organellar case-insensitive resolution |
+| `GCF_000009045.1_ASM904v1.ncbiGene.bb` | `NC_000964.3` (B. subtilis) | Real-world RefSeq bigBed (from repo) |
+| `GCA_009914755.4.chromAlias.bb` | `CP068254.1` etc. | Real chromAlias bigBed (from repo) |
+| `chr21.refseq.bb` | `chr21` | Direct-match fixture (from repo) |
+
+Regeneration scripts: `/tmp/make_fixtures.py` (kept out of git; regenerable).

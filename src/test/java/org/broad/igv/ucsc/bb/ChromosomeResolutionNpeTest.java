@@ -123,4 +123,120 @@ public class ChromosomeResolutionNpeTest {
         Integer idUnknown = reader.getIdForChr("chrZ");   // not in file or genome
         assertNull(idUnknown);   // must return null, never throw
     }
+
+    /**
+     * RefSeq-accession bigWig: the file's chromosome tree is named entirely with NCBI
+     * RefSeq accessions (NC_003070.9 ... NC_037304.1, as many published TAIR10 files
+     * are).  The genome exposes chr1..chrM canonical names plus the same accessions as
+     * aliases.  Resolution must happen through the genome alias record.
+     */
+    @Test
+    public void testRefSeqAccessionBigWigAliasResolution() throws IOException {
+        String path = TestUtils.DATA_DIR + "bb/tair10_refseq.bigWig";
+        Genome genome = mockTair10Genome();   // canonical chr1..chrM + NC_* aliases
+        BBFile reader = new BBFile(path, genome);
+        BBDataSource source = new BBDataSource(reader, genome);
+
+        // Genome canonical name chr1 must resolve to file's NC_003070.9 via alias.
+        Integer id = reader.getIdForChr("chr1");
+        assertNotNull("chr1 must resolve to RefSeq accession via alias", id);
+
+        List<LocusScore> scores = source.getPrecomputedSummaryScores("chr1", 0, Integer.MAX_VALUE, 1);
+        assertNotNull(scores);
+        assertTrue("expected data for chr1 via alias", scores.size() > 0);
+
+        DataTile tile = source.getRawData("chr1", 0, Integer.MAX_VALUE);
+        assertNotNull(tile);
+        assertTrue(!tile.isEmpty());
+    }
+
+    /**
+     * Organellar case: file uses ChrC / ChrM (capital C/M, as in real WGBS output),
+     * genome exposes chrC / chrM.  Case-insensitive fallback must cover organelles too,
+     * not just the main chromosomes.
+     */
+    @Test
+    public void testOrganellarCaseInsensitiveResolution() throws IOException {
+        String path = TestUtils.DATA_DIR + "bb/tair10_organellar_case.bigWig";
+        Genome genome = mockTair10Genome();
+        BBFile reader = new BBFile(path, genome);
+        BBDataSource source = new BBDataSource(reader, genome);
+
+        Integer idC = reader.getIdForChr("chrC");
+        assertNotNull("chrC must resolve to file ChrC", idC);
+        Integer idM = reader.getIdForChr("chrM");
+        assertNotNull("chrM must resolve to file ChrM", idM);
+
+        // Summary path through case-insensitive resolution on a chromosome whose
+        // zoom scale matches (chr1): must resolve and return data.
+        List<LocusScore> scores1 = source.getPrecomputedSummaryScores("chr1", 0, Integer.MAX_VALUE, 1);
+        assertNotNull(scores1);
+        assertTrue("expected data for chr1 via case-insensitive resolution", scores1.size() > 0);
+
+        // Tiny organelles (154kb/366kb) at zoom=1 legitimately fall below the file's
+        // zoom reduction level, so the summary path may return null (upstream
+        // behavior).  The IGV-X guarantee is: never NPE for a resolved chromosome.
+        List<LocusScore> scoresC = source.getPrecomputedSummaryScores("chrC", 0, Integer.MAX_VALUE, 1);
+        assertTrue(scoresC == null || !scoresC.isEmpty());   // no NPE, empty/null allowed
+
+        // Raw-data path for organelles must resolve and return data (no zoom needed).
+        DataTile tileC = source.getRawData("chrC", 0, Integer.MAX_VALUE);
+        assertNotNull(tileC);
+        assertTrue("expected raw data for chrC", !tileC.isEmpty());
+        DataTile tileM = source.getRawData("chrM", 0, Integer.MAX_VALUE);
+        assertNotNull(tileM);
+        assertTrue(!tileM.isEmpty());
+    }
+
+    /**
+     * Real-world RefSeq bigBed (B. subtilis ncbiGene): the file's single chromosome is
+     * the accession NC_000964.3.  A genome exposing a different canonical name with
+     * NC_000964.3 as an alias must still resolve.
+     */
+    @Test
+    public void testRealRefSeqBigBedAliasResolution() throws IOException {
+        String path = TestUtils.DATA_DIR + "bb/GCF_000009045.1_ASM904v1.ncbiGene.bb";
+        // Genome whose canonical name is "chr" (as some assemblies label the single
+        // replicon) but which carries NC_000964.3 as an alias.
+        Genome genome = mockSingleChrGenome("chr", "NC_000964.3");
+        BBFile reader = new BBFile(path, genome);
+        BBDataSource source = new BBDataSource(reader, genome);
+
+        Integer id = reader.getIdForChr("chr");
+        assertNotNull("canonical chr must resolve to file NC_000964.3", id);
+
+        // Reading actual features through the data source must not throw.
+        List<LocusScore> scores = source.getPrecomputedSummaryScores("chr", 0, Integer.MAX_VALUE, 1);
+        assertNotNull(scores);
+    }
+
+    /**
+     * A genome with a single chromosome plus one RefSeq alias, used for real-world
+     * RefSeq-accession fixtures (e.g. bacterial assemblies).
+     */
+    private static Genome mockSingleChrGenome(String canonical, String refseq) {
+        List<Chromosome> chromosomeList = new ArrayList<>();
+        chromosomeList.add(new Chromosome(1, canonical, 4215606));   // B. subtilis 168
+        Genome genome = new Genome("bsub", chromosomeList);
+        ChromAliasSource aliasSource = new ChromAliasSource() {
+            @Override
+            public ChromAlias search(String token) {
+                if (token.equals(canonical) || token.equals(refseq)) {
+                    ChromAlias record = new ChromAlias(canonical);
+                    record.put("ncbi", refseq);
+                    record.put("ucsc", canonical);
+                    return record;
+                }
+                return null;
+            }
+
+            @Override
+            public String getChromosomeAlias(String chr, String nameSet) {
+                ChromAlias record = search(chr);
+                return record == null ? null : record.get(nameSet);
+            }
+        };
+        genome.setChromAliasSource(aliasSource);
+        return genome;
+    }
 }
