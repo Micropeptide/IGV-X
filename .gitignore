@@ -5,3 +5,18 @@
 
 #JENV local config file
 .java-version
+/test/batch/snapshots/
+/.claude/
+
+# --- IGV-X additions ---
+# Project-local data: Runtian's Arabidopsis test data (large, input-only; see docs/test-datasets.md)
+/Ara_genome_annotate/
+# Vendored toolchain (JDK 21 etc.) — see docs/build.md
+/tools/
+# macOS cruft
+.DS_Store
+# Local gradle home (keep builds inside project, outside approved areas)
+/.gradle-home/
+# Scratch / local test outputs
+/tmp-test/
+/igvx-session-*.xml
