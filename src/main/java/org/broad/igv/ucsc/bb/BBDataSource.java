@@ -139,7 +139,11 @@ public class BBDataSource extends AbstractDataSource implements DataSource {
                 return null;
             } else {
                 long rTreeOffset = zlHeader.indexOffset;
-                int chrIdx = reader.getIdForChr(chr);
+                Integer chrIdx = reader.getIdForChr(chr);
+                if (chrIdx == null) {
+                    // IGV-X: unknown chromosome -> no data for this file, never NPE.
+                    return new ArrayList<>();
+                }
                 List<byte[]> chunks = this.reader.getLeafChunks(chr, start, chr, end, rTreeOffset);
                 List<LocusScore> features = new ArrayList<>();
                 for (byte[] c : chunks) {

@@ -99,6 +99,8 @@ public class BBFile {
     private String[] chrNames;
     private double featureDensity;
     private Map<String, String> chrAliasTable;
+    // IGV-X: lazily-built lower-case chromosome-name index for case-insensitive resolution.
+    private Map<String, Integer> chrNameLowerCaseIndex;
     private BBTotalSummary totalSummary;
     private BPTree[] _searchTrees;
     private Map<Long, RPTree> rTreeCache;
@@ -394,7 +396,39 @@ public class BBFile {
             this.chrAliasTable.put(chr, alias);  // alias may be undefined => no alias exists. Setting prevents repeated attempts
         }
 
+        // IGV-X: case-insensitive fallback against the file's own chromosome names.
+        // Handles e.g. bigWig tracks with Chr1..ChrM vs a genome exposing chr1/NC_* names.
+        if (chrIdx == null) {
+            chrIdx = getIdForChrCaseInsensitive(chr);
+            if (chrIdx != null) {
+                this.chrAliasTable.put(chr, chromTree.getNameForId(chrIdx));
+            }
+        }
+
         return chrIdx;
+    }
+
+    /**
+     * IGV-X: resolve a chromosome name against the file's own chromosome tree,
+     * case-insensitively.  Used only when an exact or alias-based lookup fails;
+     * returns null (never throws) when no match exists.
+     */
+    private Integer getIdForChrCaseInsensitive(String chr) {
+        if (chr == null) {
+            return null;
+        }
+        if (chrNameLowerCaseIndex == null) {
+            chrNameLowerCaseIndex = new HashMap<>();
+            String[] names = chromTree.names();
+            if (names != null) {
+                for (int i = 0; i < names.length; i++) {
+                    if (names[i] != null) {
+                        chrNameLowerCaseIndex.putIfAbsent(names[i].toLowerCase(), i);
+                    }
+                }
+            }
+        }
+        return chrNameLowerCaseIndex.get(chr.toLowerCase());
     }
 
     String getChrForId(int chrIdx) {
