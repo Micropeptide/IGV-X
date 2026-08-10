@@ -72,12 +72,17 @@ checkout with the vendored toolchain (`tools/jdk-21.0.12+8/`,
 - Ad-hoc signing (`codesign -s -`) for local/dev builds.
 - Developer ID signing + notarization when Runtian provides a Developer
   ID certificate and Apple credentials; until then the release artifact
-  is unsigned with clear documentation (users must right-click-open or
-  `xattr -dr com.apple.quarantine`).
+  is ad-hoc signed with clear documentation (users must right-click-open
+  or `xattr -dr com.apple.quarantine`).
 - Hardened runtime: `--options runtime` for notarized builds.
-- Scripts under `scripts/package/` will codify the exact `codesign`,
-  `dmgbuild`/`hdiutil`, and `notarytool` invocations; keep secrets out
-  of the repo (env vars / Keychain).
+- **Implemented**: `scripts/package/build_release.sh` codifies the full
+  pipeline — fresh bundle build (with the stale-app-dir cleanup so the
+  zip never carries leftover `IGV_user.app`-style blobs), IGV-X launcher/
+  resource enforcement, ad-hoc or Developer ID codesign, UDZO DMG + ZIP,
+  `SHA256SUMS`, and `version.txt` metadata, plus post-build verification
+  (codesign verify, plist identity, launcher, `hdiutil verify`). See
+  `scripts/package/README.md`. Notarization (`notarytool` + stapler)
+  remains future work — keep secrets out of the repo (env vars / Keychain).
 
 ## 6. Checksums & release notes
 

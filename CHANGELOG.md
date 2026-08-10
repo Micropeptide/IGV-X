@@ -11,6 +11,16 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 
 ### Added
 
+### Added (IGV-X reproducible release packaging)
+- **`scripts/package/build_release.sh`**: one-command reproducible macOS release
+  packaging — release gate (full test suite), fresh `WithJava` bundle build
+  with stale-app-dir cleanup (prevents leftover `IGV_user.app`-style blobs
+  from bloat-carrying into the zip), IGV-X launcher/resource enforcement,
+  ad-hoc or Developer ID codesign, UDZO DMG + ZIP, `SHA256SUMS`, `version.txt`
+  metadata, and post-build verification (codesign verify, plist identity,
+  launcher, `hdiutil verify`). Documented in `scripts/package/README.md` and
+  `docs/release.md`.
+
 ### Added (IGV-X macOS integration + accessibility)
 - **macOS native integration**: screen menu bar (`apple.laf.useScreenMenuBar`) so IGV-X uses the system menu bar; app name property `IGV-X`; green-button fullscreen enabled (`FullScreenUtilities` via reflection); macOS application handlers installed when supported: Preferences (Cmd+, opens Preferences), Quit (Cmd+Q now routes through the unsaved-session confirmation instead of quitting blindly), and Open File (Finder drag-and-drop onto the Dock icon loads files/sessions through the same smart routing as File > Open). All guarded by `Desktop.isSupported` so non-macOS/headless platforms are unaffected.
 - **Keyboard accelerators** on the File and View menus using the platform menu shortcut (Cmd on macOS, Ctrl elsewhere): Open (Cmd+O), Load from URL (Cmd+U), New Session (Cmd+N), Save Session (Cmd+S), Preferences (Cmd+,), Exit (Cmd+Q). `MenuAction` gained an accelerator-aware constructor; headless-safe (falls back to Ctrl in unit tests).
