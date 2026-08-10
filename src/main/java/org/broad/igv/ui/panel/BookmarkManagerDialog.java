@@ -142,7 +142,10 @@ public class BookmarkManagerDialog extends JDialog {
             RegionOfInterestPanel.setSelectedRegion(null);
         }
         IGV.getInstance().getSession().getBookmarksObservable().setChangedAndNotify();
-        IGV.getInstance().repaint();
+        // Lightweight repaint (see IGV.addBookmark) - highlight changes only
+        // affect already-painted overlays; avoid triggering track loads and a
+        // wait cursor that could stick on a hung load.
+        IGV.getInstance().getContentPane().repaint();
         reload();
     }
 

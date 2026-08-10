@@ -88,6 +88,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
@@ -415,7 +416,10 @@ public class IGV implements IGVEventObserver {
         if (bookmark.isHighlighted()) {
             RegionOfInterestPanel.setSelectedRegion(bookmark);
         }
-        repaint();
+        // Lightweight repaint: bookmark changes only affect overlays already
+        // painted with loaded data.  Using the heavy repaint() here would trigger
+        // track data loads and the wait cursor, which can stick if a load hangs.
+        contentPane.repaint();
     }
 
     /**
@@ -440,7 +444,9 @@ public class IGV implements IGVEventObserver {
      */
     public void removeBookmarks(Collection<Bookmark> bookmarks) {
         session.removeBookmarks(bookmarks);
-        repaint();
+        // Lightweight repaint (see addBookmark) - avoid triggering track loads
+        // and a wait cursor that could stick on a hung load.
+        contentPane.repaint();
     }
 
     public void beginROI(JButton button) {
@@ -2446,6 +2452,14 @@ public class IGV implements IGVEventObserver {
     }
 
     private boolean isLoading = false;
+
+    /**
+     * IGV-X: maximum time an async track-data load may hold the wait cursor.
+     * A hung load (cloud placeholder, unreachable network) must never leave the
+     * cursor spinning forever; after this timeout the cursor is released and the
+     * load continues in the background.
+     */
+    private static final long WAIT_CURSOR_TIMEOUT_SECONDS = 60;
     private Collection<? extends Track> pending = null;
 
     private void repaint(final JComponent component, Collection<? extends Track> trackList) {
@@ -2507,7 +2521,15 @@ public class IGV implements IGVEventObserver {
                 final CompletableFuture[] futureArray = futures.toArray(new CompletableFuture[futures.size()]);
                 WaitCursorManager.CursorToken token = WaitCursorManager.showWaitCursor();
                 isLoading = true;
-                CompletableFuture.allOf(futureArray).thenApplyAsync(future -> {
+                CompletableFuture.allOf(futureArray)
+                        // IGV-X watchdog: a hung track load (e.g. cloud placeholder,
+                        // unreachable network) must never leave the wait cursor on
+                        // forever.  After the timeout we release the cursor and reset
+                        // the loading state; the loads themselves continue in the
+                        // background and any data they eventually produce appears on
+                        // the next repaint.
+                        .orTimeout(WAIT_CURSOR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .thenApplyAsync(future -> {
                     WaitCursorManager.removeWaitCursor(token);
                     // Autoscale as required, check layouts (for scrollbar changes), and repaint.
                     Autoscaler.autoscale(getAllTracks());
@@ -2524,7 +2546,14 @@ public class IGV implements IGVEventObserver {
                     return null;
                 }).exceptionally(ex -> {
                     WaitCursorManager.removeWaitCursor(token);
-                    log.error("Error loading track data", ex);
+                    boolean timedOut = ex instanceof java.util.concurrent.CompletionException
+                            && ex.getCause() instanceof java.util.concurrent.TimeoutException;
+                    if (timedOut) {
+                        log.warn("Track data load timed out after " + WAIT_CURSOR_TIMEOUT_SECONDS +
+                                "s; releasing wait cursor (load continues in background)");
+                    } else {
+                        log.error("Error loading track data", ex);
+                    }
                     isLoading = false;
                     pending = null;
                     return null;
