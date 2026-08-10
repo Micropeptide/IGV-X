@@ -87,8 +87,14 @@ public class TrackClassifier {
         }
 
         if (genotype == null) {
-            genotype = deriveGenotype(trackName, context, contextIndex);
-            autoGenotype = true;
+            // Auto-derive a genotype only when a context token was found (the
+            // name prefix before it is the genotype).  Tracks with no context
+            // and no matching genotype rule are Ungrouped - we do not guess a
+            // genotype from an arbitrary name.
+            if (context != null && contextIndex >= 0) {
+                genotype = deriveGenotype(trackName, context, contextIndex);
+                autoGenotype = true;
+            }
             if (genotype == null) {
                 genotype = UNGROUPED;
             }

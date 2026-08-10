@@ -59,6 +59,17 @@ public class TrackGroup {
 
     private boolean drawBorder = true;
 
+    /** IGV-X: optional background tint for this group (genotype coloring). */
+    private Color background;
+
+    public Color getBackground() {
+        return background;
+    }
+
+    public void setBackground(Color background) {
+        this.background = background;
+    }
+
     private List<Track> tracks;
 
     private boolean selected;

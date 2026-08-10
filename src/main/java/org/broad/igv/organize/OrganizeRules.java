@@ -72,9 +72,9 @@ public class OrganizeRules {
      */
     public static OrganizeRules createDefaults() {
         OrganizeRules rules = new OrganizeRules();
-        rules.contexts.add(new ContextRule("CG", "(?i)\\bCG\\b", new Color(31, 119, 180)));   // blue
-        rules.contexts.add(new ContextRule("CHG", "(?i)\\bCHG\\b", new Color(255, 127, 14)));  // orange
-        rules.contexts.add(new ContextRule("CHH", "(?i)\\bCHH\\b", new Color(44, 160, 44)));   // green
+        rules.contexts.add(new ContextRule("CG", "(?i)CG", new Color(31, 119, 180)));   // blue
+        rules.contexts.add(new ContextRule("CHG", "(?i)CHG", new Color(255, 127, 14)));  // orange
+        rules.contexts.add(new ContextRule("CHH", "(?i)CHH", new Color(44, 160, 44)));   // green
         // No explicit genotype rules by default -> classifier auto-derives the
         // genotype from the track name prefix before the context token.
         return rules;

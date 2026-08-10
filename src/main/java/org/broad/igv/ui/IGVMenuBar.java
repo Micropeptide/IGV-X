@@ -591,6 +591,16 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText(UIConstants.GROUP_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: organize tracks by genotype -> CG/CHG/CHH with editable rules
+        JMenuItem organizeItem = new JMenuItem("Organize Tracks by Genotype...");
+        organizeItem.setToolTipText("Group tracks by genotype with per-genotype background tint and consistent CG/CHG/CHH colors (editable rules)");
+        organizeItem.addActionListener(e -> {
+            new org.broad.igv.organize.OrganizeTracksDialog(
+                    IGV.getInstance().getMainFrame(),
+                    org.broad.igv.organize.OrganizeRules.load()).setVisible(true);
+        });
+        menuItems.add(organizeItem);
+
         // Filter Tracks
         filterTracksAction = new FilterTracksMenuAction("Filter Tracks...", KeyEvent.VK_F, IGV.getInstance());
         filterTracksAction.setToolTipText(UIConstants.FILTER_TRACKS_TOOLTIP);
