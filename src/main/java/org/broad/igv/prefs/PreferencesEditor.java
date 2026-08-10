@@ -30,7 +30,20 @@ public class PreferencesEditor {
 
     private static Logger log = LogManager.getLogger(PreferencesEditor.class);
 
-    private static final Font labelFont = new Font("Lucida Grande", Font.BOLD, 14);
+    private static final Font labelFont = createLabelFont();
+
+    /**
+     * IGV-X: use the look-and-feel's label font (system font on macOS Aqua)
+     * instead of a hard-coded platform font, so section headers match the
+     * rest of the dialog on Retina and non-mac platforms alike.
+     */
+    private static Font createLabelFont() {
+        Font base = UIManager.getFont("Label.font");
+        if (base == null) {
+            base = new Font("Lucida Grande", Font.PLAIN, 13);
+        }
+        return base.deriveFont(Font.BOLD, base.getSize2D() + 1f);
+    }
 
     public static void main(String[] args) throws IOException {
         open(null);
@@ -51,9 +64,12 @@ public class PreferencesEditor {
             frame.add(panel);
             frame.pack();
             frame.setSize(900, 600);
+            frame.setMinimumSize(new Dimension(700, 480));
             frame.setLocationRelativeTo(parent);
             frame.setVisible(true);
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.getAccessibleContext().setAccessibleName("IGV-X Preferences");
+            frame.getAccessibleContext().setAccessibleDescription("Application preferences grouped by category");
 
         });
     }
@@ -187,6 +203,7 @@ public class PreferencesEditor {
                         comboBox.addActionListener(event -> {
                             updatedPrefs.put(pref.getKey(), comboBox.getSelectedItem().toString());
                         });
+                        label.setLabelFor(comboBox);
                         grid.addLayoutComponent(label, new GridBagConstraints(0, row, 1, 1, 0.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(3, 5, 2, 3), 2, 2));
                         grid.addLayoutComponent(comboBox, new GridBagConstraints(1, row, 3, 1, 1.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(3, 2, 2, 5), 2, 2));
                         group.add(label);
@@ -210,6 +227,7 @@ public class PreferencesEditor {
                             String s = ColorUtilities.colorToString(c1);
                             updatedPrefs.put(pref.getKey(), s);
                         });
+                        label.setLabelFor(colorSwatch);
                         grid.addLayoutComponent(label, new GridBagConstraints(0, row, 1, 1, 0.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(3, 5, 2, 3), 2, 2));
                         grid.addLayoutComponent(colorSwatch, new GridBagConstraints(1, row, 3, 1, 1.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(3, 2, 2, 5), 2, 2));
                         group.add(label);
@@ -257,6 +275,7 @@ public class PreferencesEditor {
                             }
                         });
 
+                        label.setLabelFor(field.get());
                         grid.addLayoutComponent(label, new GridBagConstraints(0, row, 1, 1, 0.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(3, 5, 2, 3), 2, 2));
                         grid.addLayoutComponent(field.get(), new GridBagConstraints(1, row, 1, 1, 1.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(3, 2, 2, 5), 2, 2));
                         group.add(label);

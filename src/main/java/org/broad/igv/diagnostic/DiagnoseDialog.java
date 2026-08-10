@@ -46,6 +46,9 @@ public class DiagnoseDialog extends JDialog {
         super(parent, "IGV-X Diagnose", true);
         JTextArea area = new JTextArea(text);
         area.setEditable(false);
+        area.getAccessibleContext().setAccessibleName("Diagnostic report");
+        area.getAccessibleContext().setAccessibleDescription(
+                "Read-only diagnostic report; use Copy to clipboard to share it");
         area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         area.setLineWrap(false);
         JScrollPane scroll = new JScrollPane(area);

@@ -17,6 +17,13 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 - **Accessibility (VoiceOver/assistive tech)**: icon-only toolbar buttons in the command bar now carry explicit accessible names + descriptions (Home, Back, Forward, Refresh, ROI, Fit-to-window, Details, Ruler, Go, Search field) so screen readers describe them.
 - Regression tests: `MenuActionTest` (accelerator key code + platform shortcut mask set; no accelerator when disabled).
 
+### Added (IGV-X window state + dialog polish)
+- **Window state remembered across launches**: if you exit while the main window is maximized (green zoom / maximize), IGV-X saves that state and re-maximizes on next launch; it also saves the last *non-maximized* bounds so restoring never gives you a stretched full-screen rect. Bounds are persisted on every exit path (Cmd+Q, File > Exit, red close button). New prefs: `IGVX.Frame.Maximized`; `IGVPreferences.setApplicationFrameMaximized` / `isApplicationFrameMaximized`.
+- **Preferences dialog modernization**: resizable (minimum 700x480 instead of fixed), section-header font now derived from the system/L&F label font instead of a hard-coded Lucida Grande, dialog carries an accessible name/description, and every labeled control (combo boxes, color swatches, text/password fields) is associated with its label via `setLabelFor` so VoiceOver announces the preference name when focusing the field.
+- **Track-name panel accessibility**: the custom-painted track name panel now exposes an accessible name + description for assistive tech.
+- **Diagnose dialog accessibility**: read-only report area has an accessible name/description.
+- Regression tests: `PreferencesManagerTest` gains window-state round-trips (maximized flag, bounds, zero-size bounds refusal).
+
 ### Added (IGV-X diagnostics + error recovery)
 - **Diagnose Track/Session (Tools menu + track popup)**: new `org.broad.igv.diagnostic` package — `TrackDiagnostics` inspects a track and reports resource presence (local/remote, empty file), index existence (BAM/CRAM `.bai`/`.crai`, Tribble `.idx`/`.tbi`, self-indexed bigWig/bigBed/TDF), the chromosome-resolution comparison (exact / case-insensitive / alias-aware vs the current genome, with unmatched names listed), and JVM heap pressure. `DiagnoseDialog` shows a copyable report; safe to run on any track — never renames user files, never mutates state.
 - Public chromosome-name accessors for diagnostics: `TribbleFeatureSource.getChromosomeNames()` and `TDFDataSource.getChromosomeNames()` (read-only, sorted/immutable snapshot).

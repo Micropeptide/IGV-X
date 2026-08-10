@@ -50,6 +50,7 @@ final public class Constants {
     public static final String DEFINE_GENOME_INPUT_DIRECTORY_KEY = "DEFINE_GENOME_INPUT_DIRECTORY_KEY";
     public static final String DEFAULT_GENOME = "DEFAULT_GENOME_KEY";
     public static final String FRAME_BOUNDS_KEY = "IGV.Bounds";
+    public static final String FRAME_MAXIMIZED_KEY = "IGVX.Frame.Maximized";
 
 
     public static final String GENOMES_SERVER_URL = "IGV.genome.sequence.dir";

@@ -108,6 +108,9 @@ public class IGV implements IGVEventObserver {
 
     // Window components
     private Frame mainFrame;
+
+    // Last known non-maximized bounds (IGV-X: used to persist a sane window rect when exiting maximized)
+    private Rectangle lastNormalBounds;
     private JRootPane rootPane;
     private IGVContentPane contentPane;
     private IGVMenuBar menuBar;
@@ -304,9 +307,20 @@ public class IGV implements IGVEventObserver {
             applicationBounds = new Rectangle(0, 0, Math.min(1150, screenBounds.width), Math.min(800, screenBounds.height));
         }
         mainFrame.setBounds(applicationBounds);
+        lastNormalBounds = applicationBounds;
 
         // IGV-X: enable the macOS green-button fullscreen (Zoom -> Enter Full Screen)
         DesktopIntegration.enableFullscreen(mainFrame);
+
+        // IGV-X: remember the last non-maximized bounds so we can persist a sane window rect on exit
+        if (mainFrame instanceof JFrame) {
+            JFrame jf = (JFrame) mainFrame;
+            jf.addWindowStateListener(e -> {
+                if ((e.getNewState() & JFrame.MAXIMIZED_BOTH) == 0) {
+                    lastNormalBounds = jf.getBounds();
+                }
+            });
+        }
 
         subscribeToEvents();
 
@@ -325,6 +339,13 @@ public class IGV implements IGVEventObserver {
 
     public Frame getMainFrame() {
         return mainFrame;
+    }
+
+    /**
+     * IGV-X: last known non-maximized bounds of the main window.
+     */
+    public Rectangle getLastNormalBounds() {
+        return lastNormalBounds;
     }
 
     public GhostGlassPane getDnDGlassPane() {
@@ -2018,6 +2039,12 @@ public class IGV implements IGVEventObserver {
                     setAppleDockIcon();
                 }
                 mainFrame.setVisible(true);
+
+                // IGV-X: restore maximized state if the user exited maximized last time
+                if (mainFrame instanceof JFrame
+                        && PreferencesManager.getPreferences().isApplicationFrameMaximized()) {
+                    ((JFrame) mainFrame).setExtendedState(JFrame.MAXIMIZED_BOTH);
+                }
             });
 
             // Load the initial genome.

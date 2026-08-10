@@ -49,6 +49,7 @@ import org.broad.igv.lists.GeneListManagerUI;
 import org.broad.igv.logging.LogManager;
 import org.broad.igv.logging.Logger;
 import org.broad.igv.prefs.PreferencesManager;
+import org.broad.igv.prefs.IGVPreferences;
 import org.broad.igv.tools.IgvToolsGui;
 import org.broad.igv.tools.motiffinder.MotifFinderPlugin;
 import org.broad.igv.track.CombinedDataSourceDialog;
@@ -1226,7 +1227,21 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         try {
             igv.saveStateForExit();
             Frame mainFrame = igv.getMainFrame();
-            PreferencesManager.getPreferences().setApplicationFrameBounds(mainFrame.getBounds());
+            IGVPreferences prefs = PreferencesManager.getPreferences();
+
+            // IGV-X: persist maximized state and a sane (non-maximized) window rect.
+            // When maximized, getBounds() returns the maximized rect; use the last
+            // known normal bounds instead so the next launch restores a usable window.
+            boolean maximized = false;
+            if (mainFrame instanceof JFrame) {
+                maximized = (((JFrame) mainFrame).getExtendedState() & JFrame.MAXIMIZED_BOTH) != 0;
+            }
+            prefs.setApplicationFrameMaximized(maximized);
+            if (maximized && igv.getLastNormalBounds() != null) {
+                prefs.setApplicationFrameBounds(igv.getLastNormalBounds());
+            } else {
+                prefs.setApplicationFrameBounds(mainFrame.getBounds());
+            }
 
             // Hide and close the application
             mainFrame.setVisible(false);

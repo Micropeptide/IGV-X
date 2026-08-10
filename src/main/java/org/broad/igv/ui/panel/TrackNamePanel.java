@@ -78,6 +78,11 @@ public class TrackNamePanel extends TrackPanelComponent implements Paintable {
     public TrackNamePanel(TrackPanel trackPanel) {
         super(trackPanel);
         init();
+        // IGV-X: give the custom-painted name panel a readable accessible identity
+        // for VoiceOver and other assistive tech (the panel itself draws track names).
+        getAccessibleContext().setAccessibleName("Track names");
+        getAccessibleContext().setAccessibleDescription(
+                "Name panel listing loaded tracks; use the View menu to manage track visibility");
     }
 
     Collection<TrackGroup> getGroups() {

@@ -609,6 +609,20 @@ public class IGVPreferences {
     }
 
     /**
+     * Persist whether the main window was maximized on exit (IGV-X).
+     */
+    public void setApplicationFrameMaximized(boolean maximized) {
+        put(Constants.FRAME_MAXIMIZED_KEY, maximized);
+    }
+
+    /**
+     * @return true if the main window was maximized the last time the app exited.
+     */
+    public boolean isApplicationFrameMaximized() {
+        return Boolean.parseBoolean(get(Constants.FRAME_MAXIMIZED_KEY, "false"));
+    }
+
+    /**
      * @param recentSessions
      */
     public void setRecentSessions(String recentSessions) {
