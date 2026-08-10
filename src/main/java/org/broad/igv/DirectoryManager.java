@@ -104,10 +104,11 @@ public class DirectoryManager {
 
             IGV_DIRECTORY = getIgvDirectoryOverride();
 
-            // If still null, try the default place
+            // If still null, try the default place.  IGV-X: use ~/igvx (never ~/igv) so it
+            // cannot collide with a stock IGV installation.
             if (IGV_DIRECTORY == null) {
                 File rootDir = getUserHome();
-                IGV_DIRECTORY = new File(rootDir, "igv");
+                IGV_DIRECTORY = new File(rootDir, "igvx");
 
                 if (!IGV_DIRECTORY.exists()) {
                     try {

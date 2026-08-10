@@ -149,8 +149,9 @@ public class Main {
         // Check if the .igv directory exists and create it if not.  This is a config
         // file with a known name and location, not intended to be moved by the user.
         // At present, this is only used by the launcher scripts and not the Java code.
+        // IGV-X: use ~/.igvx instead of ~/.igv so we never touch a stock IGV install.
         String userHome = System.getProperty("user.home");
-        File dir = new File(userHome, ".igv");
+        File dir = new File(userHome, ".igvx");
         if (!dir.exists()) {
             // doesn't exist -- try to create it
             try {
