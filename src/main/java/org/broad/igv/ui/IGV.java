@@ -505,6 +505,11 @@ public class IGV implements IGVEventObserver {
                     resetPanelHeights(trackPanelAttrs.get(0), trackPanelAttrs.get(1));
                     showLoadedTrackCount();
                     revalidateTrackPanels();
+                    // IGV-X: auto-organize by genotype after a batch load when enabled.
+                    if (locators.size() > 1) {
+                        javax.swing.SwingUtilities.invokeLater(() ->
+                                org.broad.igv.organize.TrackOrganizer.autoOrganizeIfEnabled(IGV.this));
+                    }
                 }
 
                 public String getName() {
@@ -1195,6 +1200,9 @@ public class IGV implements IGVEventObserver {
 
         revalidateTrackPanels();
         setSessionModified(false);
+        // IGV-X: auto-organize by genotype after a session load when enabled.
+        javax.swing.SwingUtilities.invokeLater(() ->
+                org.broad.igv.organize.TrackOrganizer.autoOrganizeIfEnabled(this));
         return true;
     }
 

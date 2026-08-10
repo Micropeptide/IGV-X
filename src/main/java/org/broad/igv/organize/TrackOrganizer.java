@@ -43,6 +43,31 @@ public class TrackOrganizer {
     }
 
     /**
+     * IGV-X: apply the saved rules automatically after a session or batch
+     * load, but only when the user enabled auto-organize (pref
+     * IGVX.ORGANIZE.AUTO).  Must be called on the event thread.
+     *
+     * @param igv the IGV instance
+     * @return the number of tracks reorganized, or 0 when disabled / no tracks
+     */
+    public static int autoOrganizeIfEnabled(IGV igv) {
+        try {
+            if (!OrganizeRules.isAutoOrganizeEnabled()) {
+                return 0;
+            }
+            int count = organize(igv, OrganizeRules.load());
+            if (count > 0) {
+                log.info("Auto-organized " + count + " tracks by genotype");
+            }
+            return count;
+        } catch (Exception e) {
+            // Never let auto-organization break a load that already succeeded.
+            log.warn("Auto-organize by genotype failed: " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
      * Rebuild one panel's track groups from the rules.
      */
     static int organizePanel(TrackPanel panel, OrganizeRules rules) {

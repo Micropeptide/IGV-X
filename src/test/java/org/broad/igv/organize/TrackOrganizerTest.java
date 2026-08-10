@@ -139,4 +139,24 @@ public class TrackOrganizerTest {
         assertNull(groups.get(3).getBackground());
         assertTrue(groups.get(0).isDrawBorder());
     }
+
+    @Test
+    public void testAutoOrganizeDisabledIsNoOp() {
+        // Contract: with the pref off, the load hook must not touch anything
+        // (a null igv is passed on purpose — the method must return before
+        // dereferencing it).
+        OrganizeRules.setAutoOrganizeEnabled(false);
+        assertEquals(0, TrackOrganizer.autoOrganizeIfEnabled(null));
+        OrganizeRules.setAutoOrganizeEnabled(false);
+    }
+
+    @Test
+    public void testAutoOrganizeNeverBreaksALoad() {
+        // Contract: even when enabled, an organizing failure (here: null igv)
+        // is swallowed and reported as 0 — a load that already succeeded must
+        // never crash because auto-organization threw.
+        OrganizeRules.setAutoOrganizeEnabled(true);
+        assertEquals(0, TrackOrganizer.autoOrganizeIfEnabled(null));
+        OrganizeRules.setAutoOrganizeEnabled(false);
+    }
 }
