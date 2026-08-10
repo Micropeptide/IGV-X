@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /* bigWig/bigBed file structure:
  *     fixedWidthHeader
@@ -117,7 +118,7 @@ public class BBFile {
         this.path = path;
         this.genome = genome;
         this.chrAliasTable = new HashMap<>();
-        this.rTreeCache = new HashMap<>();
+        this.rTreeCache = new ConcurrentHashMap<>();
         init();
     }
 

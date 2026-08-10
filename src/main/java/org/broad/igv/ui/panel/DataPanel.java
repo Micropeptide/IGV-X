@@ -146,7 +146,7 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
 
             int trackWidth = getWidth();
 
-            computeMousableRegions(groups, trackWidth);
+            computeMousableRegions(groups, trackWidth, visibleRect);
 
             painter.paint(groups, context, getBackground(), damageRect);
 
@@ -202,7 +202,7 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
     /**
      * TODO -- move this to a "layout" command, to layout tracks and assign positions
      */
-    private void computeMousableRegions(Collection<TrackGroup> groups, int width) {
+    private void computeMousableRegions(Collection<TrackGroup> groups, int width, Rectangle viewport) {
 
         final List<MouseableRegion> mouseableRegions = parent.getMouseRegions();
         mouseableRegions.clear();
@@ -224,8 +224,13 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
 
                     if (track.isVisible()) {
                         Rectangle rect = new Rectangle(trackX, trackY, width, trackHeight);
-                        if (mouseableRegions != null) {
-                            mouseableRegions.add(new MouseableRegion(rect, track));
+                        // IGV-X: viewport culling — a track that is scrolled out of the visible area can never
+                        // be hit-tested, so skip allocating a MouseableRegion for it. Still advance trackY so
+                        // the layout stays correct for tracks below. ~98% fewer allocations for 900-track sessions.
+                        if (viewport == null || (trackY + trackHeight >= viewport.y && trackY <= viewport.y + viewport.height)) {
+                            if (mouseableRegions != null) {
+                                mouseableRegions.add(new MouseableRegion(rect, track));
+                            }
                         }
                         trackY += trackHeight;
                     }

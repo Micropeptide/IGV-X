@@ -134,10 +134,12 @@ public class ApplicationStatusBar extends JPanel implements IGVEventObserver { /
     }
 
     public void setMessage3(final String message) {
-        UIUtilities.invokeAndWaitOnEventThread(() -> {
+        // IGV-X: non-blocking (was invokeAndWait + paintImmediately, which serialized every per-file
+        // status update through the EDT — 1800 blocking round-trips for a 900-track session).
+        // Also fixed a bug: the old code painted messageBox2's bounds while setting messageBox3.
+        UIUtilities.invokeOnEventThread(() -> {
             messageBox3.setText(message);
-            messageBox.validate();
-            messageBox3.paintImmediately(messageBox2.getBounds());
+            messageBox3.repaint();
         });
     }
 

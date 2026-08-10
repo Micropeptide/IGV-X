@@ -73,6 +73,9 @@ import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -371,13 +374,22 @@ public class IGVSessionReader implements SessionReader {
 
         if (dataFiles.size() > 0) {
 
-            final List<String> errors = new ArrayList<String>();
+            final List<String> errors = Collections.synchronizedList(new ArrayList<String>());
 
-            // Load files concurrently -- TODO, put a limit on # of threads?
-            List<Thread> threads = new ArrayList(dataFiles.size());
+            // Load files concurrently, bounded to avoid thread explosion for large sessions (IGV-X: ~900 bigWigs
+            // previously spawned one thread per file, thrashing disk and EDT status-bar updates).
+            int nThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors()));
+            ExecutorService executor = Executors.newFixedThreadPool(nThreads);
             long t0 = System.currentTimeMillis();
 
             List<Runnable> synchronousLoads = new ArrayList<Runnable>();
+
+            // IGV-X: honest progress reporting (files loaded / total). Throttled to avoid EDT churn.
+            final int totalFiles = dataFiles.size();
+            final java.util.concurrent.atomic.AtomicInteger filesLoaded = new java.util.concurrent.atomic.AtomicInteger(0);
+            if (IGV.hasInstance()) {
+                IGV.getInstance().setStatusBarMessage3("Loading session: 0/" + totalFiles + " files");
+            }
 
             for (final ResourceLocator locator : dataFiles) {
 
@@ -419,6 +431,12 @@ public class IGVSessionReader implements SessionReader {
                         log.error("Error loading resource " + locator.getPath(), e);
                         String ms = "<b>" + locator.getPath() + "</b><br>&nbsp;&nbsp;" + e.toString() + "<br>";
                         errors.add(ms);
+                    } finally {
+                        int n = filesLoaded.incrementAndGet();
+                        // Throttle status updates: report at most ~every 10 files or at completion
+                        if (IGV.hasInstance() && (n % 10 == 0 || n == totalFiles)) {
+                            IGV.getInstance().setStatusBarMessage3("Loading session: " + n + "/" + totalFiles + " files");
+                        }
                     }
                 };
 
@@ -426,18 +444,16 @@ public class IGVSessionReader implements SessionReader {
                 if (Globals.isBatch() || !hasTrackElments) {
                     synchronousLoads.add(runnable);
                 } else {
-                    Thread t = new Thread(runnable);
-                    threads.add(t);
-                    t.start();
+                    executor.submit(runnable);
                 }
             }
             // Wait for all threads to complete
-            for (Thread t : threads) {
-                try {
-                    t.join();
-                } catch (InterruptedException ignore) {
-                    log.error(ignore);
-                }
+            executor.shutdown();
+            try {
+                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException ignore) {
+                log.error(ignore);
+                Thread.currentThread().interrupt();
             }
 
             // Now load data that must be loaded synchronously
@@ -447,6 +463,12 @@ public class IGVSessionReader implements SessionReader {
 
             long dt = System.currentTimeMillis() - t0;
             log.debug("Total load time = " + dt);
+
+            if (IGV.hasInstance()) {
+                int n = filesLoaded.get();
+                String msg = n == totalFiles ? "Session loaded: " + n + " files (" + dt + " ms)" : "Session loaded: " + n + "/" + totalFiles + " files (" + dt + " ms)";
+                IGV.getInstance().setStatusBarMessage3(msg);
+            }
 
             if (errors.size() > 0) {
                 StringBuffer buf = new StringBuffer();
