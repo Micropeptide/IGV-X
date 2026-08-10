@@ -66,6 +66,9 @@ public class Session implements IGVEventObserver {
 
     private int version;
     private String path;
+
+    /** IGV-X: optional companion metadata (.igvx.json) loaded with this session. */
+    private com.google.gson.JsonObject igvxMetadata;
     private String groupTracksBy;
     public boolean expandInsertions = false; //false;
     private int nextAutoscaleGroup;
@@ -181,6 +184,18 @@ public class Session implements IGVEventObserver {
      */
     public String getPath() {
         return path;
+    }
+
+    /**
+     * IGV-X: optional companion metadata (.igvx.json) for this session, or null
+     * when the session was not saved by IGV-X / has no companion.
+     */
+    public com.google.gson.JsonObject getIgvxMetadata() {
+        return igvxMetadata;
+    }
+
+    public void setIgvxMetadata(com.google.gson.JsonObject metadata) {
+        this.igvxMetadata = metadata;
     }
 
     public String getGroupByAttribute() {

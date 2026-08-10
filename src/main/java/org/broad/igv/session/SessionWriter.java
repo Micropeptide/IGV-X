@@ -103,6 +103,29 @@ public class SessionWriter {
                 fileWriter.close();
             }
         }
+
+        // IGV-X: optional companion metadata (.igvx.json). Never throws — the
+        // session file itself is the source of truth.
+        try {
+            List<String> resourcePaths = new ArrayList<>();
+            for (ResourceLocator rl : getResourceLocatorSet()) {
+                if (rl != null && rl.getPath() != null) {
+                    String p = rl.getPath();
+                    if (isUseRelative(outputFile)) {
+                        p = FileUtils.getRelativePath(outputFile.getAbsolutePath(), p);
+                    }
+                    resourcePaths.add(p);
+                }
+            }
+            SessionMetadata.write(outputFile,
+                    GenomeManager.getInstance().getGenomeId(),
+                    session.getLocusString(),
+                    getResourceLocatorSet().size(),
+                    resourcePaths,
+                    isUseRelative(outputFile));
+        } catch (Exception e) {
+            log.warn("IGV-X: companion metadata write failed", e);
+        }
     }
 
 

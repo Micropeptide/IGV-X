@@ -156,6 +156,10 @@ public class IGVSessionReader implements SessionReader {
         // Walk tree processing all nodes, starting with the root
         processRootNode(session, rootNode, sessionPath);
 
+        // IGV-X: optional companion metadata — never required; missing/invalid
+        // companion simply leaves metadata null and the session loads normally.
+        session.setIgvxMetadata(SessionMetadata.read(sessionPath));
+
         processCombinedDataSourceTracks();
 
         // Add tracks not explicitly allocated to panels.   This can happen if a track resource path changes after
