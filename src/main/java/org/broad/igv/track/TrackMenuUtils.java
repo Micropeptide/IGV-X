@@ -25,6 +25,8 @@
 
 package org.broad.igv.track;
 
+import org.broad.igv.diagnostic.DiagnoseDialog;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import htsjdk.tribble.Feature;
@@ -169,6 +171,15 @@ public class TrackMenuUtils {
         boolean dataTracksOnly = !hasFeatureTracks && hasDataTracks && !hasOtherTracks;
 
         addSharedItems(menu, tracks, hasFeatureTracks, hasCoverageTracks);
+
+        // IGV-X: Diagnose Track — inspect resource, index, chromosomes vs genome, memory
+        JMenuItem diagnoseItem = new JMenuItem("Diagnose Track...");
+        diagnoseItem.setToolTipText("IGV-X: run diagnostics on this track (file presence, index, " +
+                "chromosomes vs genome, memory).");
+        diagnoseItem.addActionListener(e ->
+                DiagnoseDialog.showForTracks(org.broad.igv.ui.IGV.getInstance().getMainFrame(),
+                        new java.util.ArrayList<>(tracks)));
+        menu.add(diagnoseItem);
         menu.addSeparator();
         if (dataTracksOnly) {
             addDataItems(menu, tracks, hasCoverageTracks);

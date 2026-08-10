@@ -190,6 +190,18 @@ abstract public class TribbleFeatureSource implements org.broad.igv.track.Featur
 
     protected abstract Collection<String> getSequenceNames();
 
+    /**
+     * IGV-X: public accessor for the sequence (chromosome) names present in this
+     * file. Used by the Diagnose Track/Session feature to compare file
+     * chromosomes against the current genome without opening the file again.
+     * Returns an immutable sorted snapshot of the names.
+     */
+    public List<String> getChromosomeNames() {
+        List<String> names = new ArrayList<>(sequenceNames);
+        Collections.sort(names);
+        return Collections.unmodifiableList(names);
+    }
+
     public abstract boolean isIndexed();
 
     public Class getFeatureClass() {

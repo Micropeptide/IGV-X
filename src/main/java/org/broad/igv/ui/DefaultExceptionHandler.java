@@ -30,6 +30,7 @@
 package org.broad.igv.ui;
 
 import org.broad.igv.logging.*;
+import org.broad.igv.diagnostic.ExceptionRateLimiter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,14 +41,33 @@ public class DefaultExceptionHandler implements UncaughtExceptionHandler {
 
     Logger log = LogManager.getLogger(DefaultExceptionHandler.class);
 
+    // IGV-X: rate-limit repeated exceptions so an exception storm (e.g. the same
+    // missing chromosome logged once per paint during a large session) does not
+    // flood logs. First occurrence logs fully; identical occurrences within the
+    // cooldown window are suppressed, with one summary line per window.
+    private static final ExceptionRateLimiter rateLimiter = new ExceptionRateLimiter();
+
+    /** IGV-X: reset the exception rate-limiter state (used on session clear). */
+    public static void resetRateLimiter() {
+        rateLimiter.reset();
+    }
+
     public void uncaughtException(Thread t, Throwable e) {
         if (e instanceof ConcurrentModificationException) {
             // Ignore these,  they are logged elsewhere
-        } else {
-            //JOptionPane.showMessageDialog(findActiveFrame(),
-            //        "An unexpected error occured: " + e.toString(), "Exception Occurred", JOptionPane.OK_OPTION);
-            log.error("Unhandled exception", e);
+            return;
+        }
 
+        ExceptionRateLimiter.Decision decision = rateLimiter.decide(e);
+        if (!decision.log) {
+            return;
+        }
+
+        if (decision.suppressedSinceLastLog > 0) {
+            log.error("Unhandled exception (suppressed " +
+                    decision.suppressedSinceLastLog + " identical occurrences in the last minute)", e);
+        } else {
+            log.error("Unhandled exception", e);
         }
     }
 

@@ -68,6 +68,11 @@ public class TDFDataSource implements CoverageDataSource {
 
     Set<String> sequenceNames;
 
+    /** IGV-X: public accessor for the chromosome names in this TDF dataset. */
+    public Set<String> getChromosomeNames() {
+        return sequenceNames;
+    }
+
     ChromAliasManager chromAliasManager;
 
     public TDFDataSource(TDFReader reader, int trackNumber, String trackName, Genome genome) {

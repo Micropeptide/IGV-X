@@ -10,6 +10,12 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 ## [Unreleased] — 2.19.X fork base
 
 ### Added
+
+### Added (IGV-X diagnostics + error recovery)
+- **Diagnose Track/Session (Tools menu + track popup)**: new `org.broad.igv.diagnostic` package — `TrackDiagnostics` inspects a track and reports resource presence (local/remote, empty file), index existence (BAM/CRAM `.bai`/`.crai`, Tribble `.idx`/`.tbi`, self-indexed bigWig/bigBed/TDF), the chromosome-resolution comparison (exact / case-insensitive / alias-aware vs the current genome, with unmatched names listed), and JVM heap pressure. `DiagnoseDialog` shows a copyable report; safe to run on any track — never renames user files, never mutates state.
+- Public chromosome-name accessors for diagnostics: `TribbleFeatureSource.getChromosomeNames()` and `TDFDataSource.getChromosomeNames()` (read-only, sorted/immutable snapshot).
+- **Exception dedup/rate-limit**: `ExceptionRateLimiter` — repeated identical exceptions (same root-cause class + message) are logged once per 60s cooldown window with a suppressed-count summary; wired into `DefaultExceptionHandler` so an exception storm (e.g. missing chromosome per paint during a large session) no longer floods the log.
+- Regression tests: `ExceptionRateLimiterTest` (first-log, dedup, per-signature independence, window expiry summary, root-cause signature), `TrackDiagnosticsTest` (exact/case/alias/missing chromosome comparison on a TAIR10-like genome).
 - IGV-X scaffold: fork base on upstream `2.19.X` stable branch (matches IGV 2.19.5 install), `upstream` remote + `IGV-X` dev branch.
 - Vendored JDK 21 (Temurin) under `tools/`; project-local Gradle home (`.gradle-home/`).
 - `docs/` tree (build, architecture, chromosome-resolution, sessions, tests, upstream-update, release, limitations) + doc index.

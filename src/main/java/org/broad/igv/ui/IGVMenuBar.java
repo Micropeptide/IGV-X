@@ -40,6 +40,7 @@ import org.broad.igv.feature.genome.GenomeManager;
 import org.broad.igv.feature.genome.ChromSizesUtils;
 import org.broad.igv.track.AttributeManager;
 import org.broad.igv.track.Track;
+import org.broad.igv.diagnostic.DiagnoseDialog;
 import org.broad.igv.ui.commandbar.HostedGenomeSelectionDialog;
 import org.broad.igv.util.GoogleUtils;
 import org.broad.igv.oauth.OAuthProvider;
@@ -254,6 +255,19 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
             }
         });
         menuItems.add(combineDataItem);
+
+        // IGV-X: Diagnose Track/Session — inspect resource, index, chromosomes vs genome, memory
+        JMenuItem diagnoseItem = new JMenuItem("Diagnose Track/Session...");
+        diagnoseItem.setToolTipText("IGV-X: inspect the selected tracks (or the whole session) — file presence, " +
+                "index, chromosomes vs genome, memory — and get actionable guidance.");
+        diagnoseItem.addActionListener(e -> {
+            List<Track> tracks = igv.getSelectedTracks();
+            if (tracks == null || tracks.isEmpty()) {
+                tracks = new ArrayList<>(igv.getAllTracks());
+            }
+            DiagnoseDialog.showForTracks(igv.getMainFrame(), tracks);
+        });
+        menuItems.add(diagnoseItem);
 
 
         MenuAction toolsMenuAction = new MenuAction("Tools", null);
