@@ -46,6 +46,13 @@ preferences, caches, and logs).
 - **Configurable default quantitative-track range**: set e.g. min -5 / max 100 in Preferences → Tracks;
   blank = autoscale.
 
+## Batch track import
+
+- **File > Open Folder of Tracks...**: recursively scans a chosen folder
+  (subfolders included) for track files (bigWig/bigBed/BAM/CRAM/VCF/BED/GFF/
+  GTF/WIG/TDF/...), shows a chooser with type filter + Select All/Clear +
+  Load Selected/Load All. Index and hidden files excluded.
+
 ## Export
 
 - **High-quality PNG / SVG / PDF export** in publication mode: DPI-scaled PNG, vector SVG/PDF (dependency-free

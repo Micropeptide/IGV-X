@@ -145,6 +145,14 @@ min −5 / max 100 for new quantitative tracks; blank = autoscale. Applied
 when a quantitative track is created and both values are valid.
 (Commit `86da40d31`.)
 
+### 4.6 Batch track import from folder (commit `6640163af`)
+
+File > **Open Folder of Tracks...** lets you pick a folder; IGV-X scans it and
+all subfolders for loadable track files and opens a chooser dialog listing
+every file (name, type), with a type filter, Select All / Clear, Load Selected
+and Load All. Index files and hidden files are never offered. Backed by a pure
+`TrackFolderScanner` (headless-testable) and `TrackFolderScannerTest`.
+
 ## 5. High-quality export
 
 File → **Save Publication Image…** (commit `7e87a86b6`):

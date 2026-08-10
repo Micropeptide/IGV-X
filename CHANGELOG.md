@@ -11,6 +11,14 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 
 ### Added
 
+### Added (IGV-X batch track import)
+- **File > Open Folder of Tracks...**: pick a folder and IGV-X recursively scans
+  it (subfolders included) for loadable track files, shows a chooser dialog
+  with per-file checkboxes, a type filter (bigWig/BAM/VCF/...), Select All /
+  Clear, and Load Selected / Load All. Index files (`.bai`/`.tbi`/`.crai`/...)
+  and hidden files are excluded automatically. Core scanner is pure
+  (`TrackFolderScanner`) and regression-tested by `TrackFolderScannerTest`.
+
 ### Added (IGV-X Arabidopsis gene lists)
 - **Bundled Arabidopsis (TAIR10) gene lists** in the gene-list dialog (View >
   Gene Lists…): curated `tair10.gmt` with 6 pathway lists — DNA methylation
