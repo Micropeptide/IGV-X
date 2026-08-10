@@ -16,6 +16,7 @@ project docs.
 - **[release.md](release.md)** — macOS packaging, versioning, signing/notarization, checksums, release checklist.
 - **[limitations.md](limitations.md)** — honest current limitations.
 - **[fork-diff.md](fork-diff.md)** — machine-readable patch list vs upstream.
+- **[changes-vs-igv.md](changes-vs-igv.md)** — **complete detailed record of every IGV-X change vs stock IGV** (the doc that answers "what's different?").
 - **[whats-different.md](whats-different.md)** — user-facing "what's different in IGV-X?".
 - **[build.md](build.md)** — building and running from source.
 - **[test-datasets.md](test-datasets.md)** — how test datasets are used.
