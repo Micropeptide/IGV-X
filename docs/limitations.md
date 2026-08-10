@@ -8,7 +8,7 @@ partially. Updated as features land; do not let this file go stale.
 - Without a loaded genome/alias table, only the file-side
   case-insensitive fallback applies; unknown names return empty results
   (no crash, but possibly "no data" to the user). The diagnostics
-  subsystem (planned) is the intended honest surface for this.
+  subsystem is the intended honest surface for this.
 - The lowercase fallback in `getCanonicalChrName` cannot distinguish two
   legitimately different chromosomes differing only by case. No real
   genome has both, so this is theoretical.
@@ -21,48 +21,56 @@ partially. Updated as features land; do not let this file go stale.
 
 ## 2. Large sessions (~900 bigWig tracks)
 
-- **Not yet implemented.** Charter priority #3 (lazy init, async loading,
-  progressive rendering, EDT reduction, caching, virtualization,
-  throttled tooltip/mouse, honest progress) is designed but not built.
-  Current behavior is upstream 2.19.X: eager-ish loading, possible EDT
-  stalls on very large sessions, memory-number-as-progress in places.
-- Milestone: verify with a synthetic ~900-track session once the
-  performance work starts; keep the honest-progress requirement
-  (never show memory numbers as progress).
+- **Implemented** (commit 674efb2fc): bounded session-load thread pool,
+  async status bar with honest `Loading session: N/total` progress,
+  viewport-culled mouse-hit regions, thread-safe R-tree caches. Verified
+  with a synthetic ~900-track session; real 900-bigWig WGBS sessions are
+  the standing end-to-end validation target.
+- Remaining: lazy track *initialization* on first view (tracks are still
+  created up front, though loaded asynchronously), and progressive
+  rendering during load are not yet fully separated.
 
 ## 3. Sessions
 
-- Relative paths, `.igvx.json` companion, bookmarks/highlights
-  persistence: **designed, not implemented** (see `sessions.md`).
+- **Implemented**: relative paths default on, `.igvx.json` companion
+  (optional; session loads if missing), bookmarks + region highlights
+  persist with the session, unified smart Open, unsaved-session close
+  confirmation. See `sessions.md`.
 
 ## 4. UI / interaction
 
-- Trackpad two-finger swipe/Magic Mouse track navigation, configurable
-  sensitivity without breaking vertical scroll: planned.
-- Multi-track selection (Cmd/Shift-click): planned.
-- High-quality PNG/SVG/PDF export (publication mode, selected tracks
-  only): planned.
-- Configurable quantitative-track default ranges (min/max): planned.
-- Dark mode / accessibility polish: not started (inherits upstream's
-  partial support).
-- HiDPI/Retina: inherited from upstream; not yet verified on all
-  displays.
+- **Implemented**: trackpad swipe navigation (configurable sensitivity),
+  ROI drag-select, multi-track selection (stock Cmd/Shift-click +
+  data-panel highlight), high-quality PNG/SVG/PDF export (publication
+  mode, selected tracks only), configurable quantitative-track default
+  ranges, window-state memory, Preferences dialog polish + a11y, macOS
+  screen menu bar / fullscreen / app handlers / accelerators.
+- **Not done**: dark mode (deliberately out of scope per charter),
+  remaining stock-IGV dialog/track-header polish, deeper VoiceOver pass
+  beyond the command bar / dialogs / track panel.
+- HiDPI/Retina: verified native on JDK 21 + Aqua; not yet verified on
+  every external display config.
 
 ## 5. Diagnostics / error recovery
 
-- Repeated-exception dedup/rate-limit: designed, not implemented.
-- Diagnose Track/Session (chromosomes in file vs genome, index exists,
-  truncated, 0/1-based, network/file-format/genome/memory/rendering):
-  designed, not implemented.
-- Batch command listener (port 60151 style): inherited; improvement
-  pending.
+- **Implemented** (commit 30da7ec8f): Diagnose Track/Session dialog
+  (chromosomes in file vs genome, index exists, truncated, 0/1-based,
+  network/file-format/genome/memory/rendering), exception dedup/
+  rate-limit in the global handler. Batch command listener (port 60151
+  style) verified intact; deeper listener improvement pending if Runtian
+  wants it.
 
 ## 6. Packaging / distribution
 
-- No signed/notarized DMG yet; dev builds are ad-hoc signed or unsigned
-  (see `release.md`).
+- **Implemented**: reproducible release script (`scripts/package/
+  build_release.sh`) producing fresh `.app` bundle + UDZO DMG + ZIP +
+  `SHA256SUMS` + `version.txt`, ad-hoc or Developer ID codesign, and
+  post-build verification.
+- **Not done**: Developer ID signing + notarization (needs Runtian's
+  certificate + Apple credentials — secrets stay out of the repo), CI
+  pipeline (design in `release.md`), x86_64/Rosetta build (Apple Silicon
+  primary).
 - No 3.0-dev migration; IGV-X targets 2.19.X stable until a written plan.
-- No CI pipeline yet (design in `release.md`).
 
 ## 7. Test-data coverage
 
