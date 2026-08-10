@@ -60,6 +60,8 @@ Source: ENA project **ERP000565** (Mott et al., *Multiple reference genomes and 
 |---|---|---|---|---|
 | Bur-0 whole-genome reads aligned to TAIR10 (real reads; IGV-browseable with the .bai below) | `https://ftp.sra.ebi.ac.uk/vol1/run/ERR031/ERR031531/Bur_0_bur_PII.bam` | 2,139,385,657 | not advertised by server | md5 `629891ecac02bb32f7e16d63c63bb243` (ENA `submitted_md5`) |
 
+> **2026-08-10 download note:** the `ftp.sra.ebi.ac.uk` endpoint is flaky for this large file (connection resets around 125 MiB). An alternate mirror that serves the same bytes is `https://ftp.ebi.ac.uk/vol1/run/ERR031/ERR031531/Bur_0_bur_PII.bam` (HTTP 200, `Accept-Ranges: bytes`, same Content-Length 2,139,385,657). Use `curl -L --fail --retry 10 --retry-all-errors -o` from the mirror. **Never resume (`-C -`) a partial whose writer was killed mid-write** — the resume appended full content over a dirty partial in testing and produced a corrupt file (md5 mismatch); always verify md5 after download.
+
 Optional index (same basename, must sit next to the BAM): `http://mtweb.cs.ucl.ac.uk/mus/www/19genomes/tair10.BAM/Bur_0_bur_PII.bam.bai` — HEAD `HTTP 200`, 356,712 bytes. (This host's https uses a self-signed certificate; use http for the .bai or generate locally with `samtools index`.)
 
 Verification evidence:
