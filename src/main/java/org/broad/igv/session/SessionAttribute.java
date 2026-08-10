@@ -56,6 +56,7 @@ public class SessionAttribute {
     public static final String URL = "url";
     public static final String FEATURE_URL = "featureURL";
     public static final String DESCRIPTION = "description";
+    public static final String HIGHLIGHTED = "highlighted";
     public static final String TYPE = "type";
     public static final String COVERAGE = "coverage";
     public static final String MAPPING = "mapping";

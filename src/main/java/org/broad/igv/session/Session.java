@@ -30,6 +30,7 @@ import org.broad.igv.event.IGVEvent;
 import org.broad.igv.event.IGVEventBus;
 import org.broad.igv.event.IGVEventObserver;
 import org.broad.igv.event.ViewChange;
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.Range;
 import org.broad.igv.feature.RegionOfInterest;
 import org.broad.igv.lists.GeneList;
@@ -92,6 +93,14 @@ public class Session implements IGVEventObserver {
     //setChangedAndNotify() method should be called after any regions change.
     private ObservableForObject<Map<String, Collection<RegionOfInterest>>> regionsOfInterestObservable;
 
+    /**
+     * Map of chromosome -> bookmarks. Bookmarks are persistent, named regions that
+     * can be highlighted; they serialize into the session file independently of
+     * regions of interest.
+     */
+    private Map<String, Collection<Bookmark>> bookmarks;
+    private ObservableForObject<Map<String, Collection<Bookmark>>> bookmarksObservable;
+
     private GeneList currentGeneList;
     private GeneListMode geneListMode = GeneListMode.NORMAL;
     private Set<String> hiddenAttributes;
@@ -107,6 +116,8 @@ public class Session implements IGVEventObserver {
         this.groupByAttribute = null;
         this.regionsOfInterest = new LinkedHashMap<>();
         this.regionsOfInterestObservable = new ObservableForObject<>(regionsOfInterest);
+        this.bookmarks = new LinkedHashMap<>();
+        this.bookmarksObservable = new ObservableForObject<>(bookmarks);
         this.preferences = new HashMap<>();
         this.colorScales = new HashMap<>();
         this.hiddenAttributes = null;
@@ -392,6 +403,62 @@ public class Session implements IGVEventObserver {
         }
         //notify all observers that regions have changed.
         regionsOfInterestObservable.setChangedAndNotify();
+    }
+
+    /**
+     * Returns the bookmarks for the given chromosome, or all bookmarks if chr == CHR_ALL.
+     */
+    public Collection<Bookmark> getBookmarks(String chr) {
+        if (chr.equals(Globals.CHR_ALL)) {
+            return getAllBookmarks();
+        } else {
+            return bookmarks.get(chr);
+        }
+    }
+
+    public Collection<Bookmark> getAllBookmarks() {
+        ArrayList<Bookmark> bookmarkList = new ArrayList<>();
+        for (Collection<Bookmark> bm : bookmarks.values()) {
+            bookmarkList.addAll(bm);
+        }
+        return bookmarkList;
+    }
+
+    public void addBookmark(Bookmark bookmark) {
+        String chr = bookmark.getChr();
+        Collection<Bookmark> bmList = bookmarks.get(chr);
+        if (bmList == null) {
+            bmList = new ArrayList<>();
+            bookmarks.put(chr, bmList);
+        }
+        bmList.add(bookmark);
+        bookmarksObservable.setChangedAndNotify();
+    }
+
+    public boolean removeBookmarks(Collection<Bookmark> bookmarksToRemove) {
+        boolean result = true;
+        for (Bookmark bookmark : bookmarksToRemove) {
+            Collection<Bookmark> bmList = bookmarks.get(bookmark.getChr());
+            if (bmList != null) {
+                result = result && bmList.remove(bookmark);
+            }
+        }
+        bookmarksObservable.setChangedAndNotify();
+        return result;
+    }
+
+    public void clearBookmarks() {
+        if (bookmarks != null) {
+            bookmarks.clear();
+        }
+        bookmarksObservable.setChangedAndNotify();
+    }
+
+    /**
+     * Allows access to the Observable that notifies of changes to the bookmarks.
+     */
+    public ObservableForObject<Map<String, Collection<Bookmark>>> getBookmarksObservable() {
+        return bookmarksObservable;
     }
 
     public void setPath(String path) {

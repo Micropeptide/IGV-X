@@ -37,6 +37,7 @@ import org.broad.igv.sam.InsertionManager;
 import org.broad.igv.sam.InsertionMarker;
 import org.broad.igv.track.RenderContext;
 import org.broad.igv.util.blat.BlatClient;
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.RegionOfInterest;
 import org.broad.igv.feature.genome.Genome;
 import org.broad.igv.feature.genome.GenomeManager;
@@ -173,6 +174,22 @@ public class RegionOfInterestPanel extends JPanel {
                 roi.setDescription(desc);
                 IGV.getInstance().getSession().getRegionsOfInterestObservable().setChangedAndNotify();
 
+            }
+        });
+        popupMenu.add(item);
+
+        // IGV-X: turn this region into a persistent bookmark
+        item = new JMenuItem("Bookmark this region");
+        item.addActionListener(new ActionListener() {
+
+            public void actionPerformed(ActionEvent e) {
+                String label = JOptionPane.showInputDialog(parent, "Bookmark label:",
+                        roi.getChr() + ":" + roi.getDisplayStart() + "-" + roi.getDisplayEnd());
+                if (label == null) {
+                    return;
+                }
+                Bookmark bookmark = new Bookmark(roi.getChr(), roi.getStart(), roi.getEnd(), label);
+                IGV.getInstance().addBookmark(bookmark);
             }
         });
         popupMenu.add(item);

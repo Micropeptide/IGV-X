@@ -44,6 +44,7 @@ import org.broad.igv.batch.CommandListener;
 import org.broad.igv.event.*;
 import org.broad.igv.exceptions.DataLoadException;
 import org.broad.igv.feature.Range;
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.RegionOfInterest;
 import org.broad.igv.feature.Strand;
 import org.broad.igv.feature.genome.*;
@@ -345,6 +346,42 @@ public class IGV implements IGVEventObserver {
     public void addRegionOfInterest(RegionOfInterest roi) {
         session.addRegionOfInterestWithNoListeners(roi);
         RegionOfInterestPanel.setSelectedRegion(roi);
+        repaint();
+    }
+
+    /**
+     * IGV-X: add a persistent bookmark to the session.
+     */
+    public void addBookmark(Bookmark bookmark) {
+        session.addBookmark(bookmark);
+        if (bookmark.isHighlighted()) {
+            RegionOfInterestPanel.setSelectedRegion(bookmark);
+        }
+        repaint();
+    }
+
+    /**
+     * IGV-X: add a persistent bookmark at the current default frame locus.
+     */
+    public void addBookmarkFromCurrentLocus() {
+        if (FrameManager.isGeneListMode()) {
+            return;
+        }
+        Range currentRange = FrameManager.getDefaultFrame().getCurrentRange();
+        String label = JOptionPane.showInputDialog(getMainFrame(), "Bookmark label:",
+                currentRange.getChr() + ":" + (currentRange.getStart() + 1) + "-" + currentRange.getEnd());
+        if (label == null) {
+            return;   // cancelled
+        }
+        Bookmark bookmark = new Bookmark(currentRange.getChr(), currentRange.getStart(), currentRange.getEnd(), label);
+        addBookmark(bookmark);
+    }
+
+    /**
+     * IGV-X: remove bookmarks from the session.
+     */
+    public void removeBookmarks(Collection<Bookmark> bookmarks) {
+        session.removeBookmarks(bookmarks);
         repaint();
     }
 

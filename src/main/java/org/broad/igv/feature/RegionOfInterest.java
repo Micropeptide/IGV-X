@@ -41,8 +41,13 @@ public class RegionOfInterest{
     private String description;
     private int start;    // In Chromosome coordinates
     private int end;      // In Chromosome coordinates
-    private static Color backgroundColor = Color.RED;
-    private static Color foregroundColor = Color.BLACK;
+    // Default colors shared by all plain regions of interest.
+    private static final Color DEFAULT_BACKGROUND_COLOR = Color.RED;
+    private static final Color DEFAULT_FOREGROUND_COLOR = Color.BLACK;
+    // Per-region colors, defaulting to the shared defaults. Subclasses (e.g. Bookmark)
+    // may override these per instance so different regions can be drawn differently.
+    private Color backgroundColor = DEFAULT_BACKGROUND_COLOR;
+    private Color foregroundColor = DEFAULT_FOREGROUND_COLOR;
     boolean selected = false;
 
     private WaitCursorManager.CursorToken token;
@@ -120,12 +125,34 @@ public class RegionOfInterest{
         return getStart() + 1;
     }
 
-    public static Color getBackgroundColor() {
+    public Color getBackgroundColor() {
         return backgroundColor;
     }
 
-    public static Color getForegroundColor() {
+    public void setBackgroundColor(Color backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
+
+    public Color getForegroundColor() {
         return foregroundColor;
+    }
+
+    public void setForegroundColor(Color foregroundColor) {
+        this.foregroundColor = foregroundColor;
+    }
+
+    /**
+     * Default background color shared by plain regions of interest.
+     */
+    public static Color getDefaultBackgroundColor() {
+        return DEFAULT_BACKGROUND_COLOR;
+    }
+
+    /**
+     * Default foreground color shared by plain regions of interest.
+     */
+    public static Color getDefaultForegroundColor() {
+        return DEFAULT_FOREGROUND_COLOR;
     }
 
 

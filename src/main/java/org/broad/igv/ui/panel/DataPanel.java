@@ -39,6 +39,7 @@ import org.broad.igv.logging.*;
 import org.broad.igv.Globals;
 import org.broad.igv.event.DataLoadedEvent;
 import org.broad.igv.event.IGVEventObserver;
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.RegionOfInterest;
 import org.broad.igv.prefs.Constants;
 import org.broad.igv.prefs.PreferencesManager;
@@ -303,6 +304,16 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
             for (RegionOfInterest regionOfInterest : regions) {
                 if (drawBars || regionOfInterest == RegionOfInterestPanel.getSelectedRegion()) {
                     drawRegion(graphics2D, regionOfInterest);
+                }
+            }
+
+            // IGV-X: draw highlighted bookmarks regardless of the region-bar preference
+            Collection<Bookmark> bookmarks = IGV.getInstance().getSession().getBookmarks(frame.getChrName());
+            if (bookmarks != null) {
+                for (Bookmark bookmark : bookmarks) {
+                    if (bookmark.isHighlighted()) {
+                        drawRegion(graphics2D, bookmark);
+                    }
                 }
             }
         } finally {

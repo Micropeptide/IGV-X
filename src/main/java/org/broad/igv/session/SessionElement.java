@@ -30,6 +30,8 @@ public class SessionElement {
     public static final String GLOBAL = "Global";
     public static final String REGION = "Region";
     public static final String REGIONS = "Regions";
+    public static final String BOOKMARK = "Bookmark";
+    public static final String BOOKMARKS = "Bookmarks";
     public static final String DATA_RANGE = "DataRange";
     public static final String PREFERENCES = "Preferences";
     public static final String PROPERTY = "Property";

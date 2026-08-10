@@ -54,6 +54,7 @@ import org.broad.igv.track.CombinedDataSourceDialog;
 import org.broad.igv.ui.action.*;
 import org.broad.igv.ui.commandbar.RemoveGenomesDialog;
 import org.broad.igv.ui.legend.LegendDialog;
+import org.broad.igv.ui.panel.BookmarkManagerDialog;
 import org.broad.igv.ui.panel.FrameManager;
 import org.broad.igv.ui.panel.MainPanel;
 import org.broad.igv.ui.panel.ReferenceFrame;
@@ -743,6 +744,25 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
         menuAction = new NavigateRegionsMenuAction("Region Navigator ...", IGV.getInstance());
         menuAction.setToolTipText(UIConstants.REGION_NAVIGATOR_TOOLTIP);
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
+        // IGV-X: persistent bookmarks
+        menuAction = new MenuAction("Add Bookmark", null, KeyEvent.VK_B) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                IGV.getInstance().addBookmarkFromCurrentLocus();
+            }
+        };
+        menuAction.setToolTipText("Add a persistent bookmark at the current locus");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
+        menuAction = new MenuAction("Bookmarks ...", null, KeyEvent.VK_M) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                BookmarkManagerDialog.getInstance(IGV.getInstance().getMainFrame()).setVisible(true);
+            }
+        };
+        menuAction.setToolTipText("Manage, jump to, highlight, and delete bookmarks");
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
         menuAction =

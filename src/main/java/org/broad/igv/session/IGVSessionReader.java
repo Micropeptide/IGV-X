@@ -28,6 +28,7 @@ package org.broad.igv.session;
 import org.broad.igv.Globals;
 import org.broad.igv.bedpe.InteractionTrack;
 import org.broad.igv.data.CombinedDataSource;
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.Locus;
 import org.broad.igv.feature.RegionOfInterest;
 import org.broad.igv.feature.basepair.BasePairTrack;
@@ -56,6 +57,7 @@ import org.broad.igv.ui.color.ColorUtilities;
 import org.broad.igv.ui.commandbar.GenomeListManager;
 import org.broad.igv.ui.panel.FrameManager;
 import org.broad.igv.ui.panel.ReferenceFrame;
+import org.broad.igv.ui.panel.RegionOfInterestPanel;
 import org.broad.igv.ui.panel.TrackPanel;
 import org.broad.igv.ui.panel.TrackPanelScrollPane;
 import org.broad.igv.ui.util.MessageUtils;
@@ -307,6 +309,10 @@ public class IGVSessionReader implements SessionReader {
             processRegions(session, (Element) element, sessionPath);
         } else if (nodeName.equalsIgnoreCase(SessionElement.REGION)) {
             processRegion(session, (Element) element, sessionPath);
+        } else if (nodeName.equalsIgnoreCase(SessionElement.BOOKMARKS)) {
+            processBookmarks(session, (Element) element, sessionPath);
+        } else if (nodeName.equalsIgnoreCase(SessionElement.BOOKMARK)) {
+            processBookmark(session, (Element) element, sessionPath);
         } else if (nodeName.equalsIgnoreCase(SessionElement.GENE_LIST)) {
             processGeneList(session, (Element) element);
         } else if (nodeName.equalsIgnoreCase(SessionElement.FILTER)) {
@@ -603,6 +609,38 @@ public class IGVSessionReader implements SessionReader {
 
         RegionOfInterest region = new RegionOfInterest(chromosome, Integer.parseInt(start), Integer.parseInt(end), description);
         igv.addRegionOfInterest(region);
+
+        NodeList elements = element.getChildNodes();
+        process(session, elements, sessionPath);
+    }
+
+    private void processBookmarks(Session session, Element element, String sessionPath) {
+        session.clearBookmarks();
+        NodeList elements = element.getChildNodes();
+        process(session, elements, sessionPath);
+    }
+
+    private void processBookmark(Session session, Element element, String sessionPath) {
+
+        String chromosome = getAttribute(element, SessionAttribute.CHROMOSOME);
+        String start = getAttribute(element, SessionAttribute.START_INDEX);
+        String end = getAttribute(element, SessionAttribute.END_INDEX);
+        String label = getAttribute(element, SessionAttribute.LABEL);
+        if (label == null) {
+            label = getAttribute(element, SessionAttribute.DESCRIPTION);
+        }
+        String colorStr = getAttribute(element, SessionAttribute.COLOR);
+        String highlightedStr = getAttribute(element, SessionAttribute.HIGHLIGHTED);
+
+        Bookmark bookmark = new Bookmark(chromosome, Integer.parseInt(start), Integer.parseInt(end), label,
+                Bookmark.colorFromString(colorStr));
+        if (highlightedStr != null) {
+            bookmark.setHighlighted(Boolean.parseBoolean(highlightedStr));
+        }
+        session.addBookmark(bookmark);
+        if (bookmark.isHighlighted()) {
+            RegionOfInterestPanel.setSelectedRegion(bookmark);
+        }
 
         NodeList elements = element.getChildNodes();
         process(session, elements, sessionPath);

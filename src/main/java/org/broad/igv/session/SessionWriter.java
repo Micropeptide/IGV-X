@@ -25,6 +25,7 @@
 
 package org.broad.igv.session;
 
+import org.broad.igv.feature.Bookmark;
 import org.broad.igv.feature.genome.Genome;
 import org.broad.igv.feature.genome.GenomeListItem;
 import org.broad.igv.logging.*;
@@ -50,6 +51,7 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import java.awt.Color;
 import javax.swing.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -65,7 +67,7 @@ public class SessionWriter {
     static Logger log = LogManager.getLogger(SessionWriter.class);
 
     private Session session;
-    private static int CURRENT_VERSION = 8;
+    private static int CURRENT_VERSION = 9;
     private File outputFile;
     private Document document;
 
@@ -161,6 +163,9 @@ public class SessionWriter {
             // Regions of Interest
             writeRegionsOfInterest(globalElement, document);
 
+            // Bookmarks (IGV-X)
+            writeBookmarks(globalElement, document);
+
             // Filter
             writeFilters(session, globalElement, document);
 
@@ -247,6 +252,39 @@ public class SessionWriter {
                 regionsElement.appendChild(regionElement);
             }
             globalElement.appendChild(regionsElement);
+        }
+    }
+
+    /**
+     * IGV-X: write persistent bookmarks to the session file.
+     *
+     * <pre>{@code
+     * <Bookmarks>
+     *   <Bookmark chromosome="chr1" start="100" end="500" label="promoter" color="#ff8800" highlighted="true"/>
+     * </Bookmarks>
+     * }</pre>
+     */
+    private void writeBookmarks(Element globalElement, Document document) {
+        Collection<Bookmark> bookmarks = session.getAllBookmarks();
+        if ((bookmarks != null) && !bookmarks.isEmpty()) {
+
+            Element bookmarksElement = document.createElement(SessionElement.BOOKMARKS);
+            for (Bookmark bookmark : bookmarks) {
+                Element bookmarkElement = document.createElement(SessionElement.BOOKMARK);
+                bookmarkElement.setAttribute(SessionAttribute.CHROMOSOME, bookmark.getChr());
+                bookmarkElement.setAttribute(SessionAttribute.START_INDEX, String.valueOf(bookmark.getStart()));
+                bookmarkElement.setAttribute(SessionAttribute.END_INDEX, String.valueOf(bookmark.getEnd()));
+                if (bookmark.getLabel() != null) {
+                    bookmarkElement.setAttribute(SessionAttribute.LABEL, bookmark.getLabel());
+                }
+                Color color = bookmark.getColor();
+                if (color != null) {
+                    bookmarkElement.setAttribute(SessionAttribute.COLOR, Bookmark.colorToString(color));
+                }
+                bookmarkElement.setAttribute(SessionAttribute.HIGHLIGHTED, String.valueOf(bookmark.isHighlighted()));
+                bookmarksElement.appendChild(bookmarkElement);
+            }
+            globalElement.appendChild(bookmarksElement);
         }
     }
 
