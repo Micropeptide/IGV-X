@@ -82,6 +82,10 @@ final public class Constants {
     public static final String CHART_TRACK_HEIGHT_KEY = "IGV.chart.track.height";
     public static final String CHART_SHOW_ALL_HEATMAP = "CHART.SHOW_ALL_HEATMAP";
     public static final String SHOW_REGION_BARS = "SHOW_REGION_BARS";
+
+    // IGV-X: horizontal swipe / trackpad panning
+    public static final String SWIPE_PAN_ENABLED = "IGVX.SWIPE_PAN_ENABLED";
+    public static final String SWIPE_PAN_SENSITIVITY = "IGVX.SWIPE_PAN_SENSITIVITY";
     public static final String DEFAULT_VISIBILITY_WINDOW = "DEFAULT_VISIBILITY_WINDOW";
     public static final String EXPAND_FEAUTRE_TRACKS = "EXPAND_FEATURE_TRACKS";
     public static final String IGV_PLUGIN_LIST_KEY = "IGV_PLUGIN_LIST";

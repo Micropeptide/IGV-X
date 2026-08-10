@@ -40,10 +40,17 @@ import java.awt.event.MouseEvent;
 
 /**
  * @author eflakes
+ *
+ * IGV-X: supports both click-click and drag-to-select region definition.
+ * Dragging paints live feedback (start + end boundaries and a translucent
+ * fill) so the user can see exactly which region will be added.
  */
 public class RegionOfInterestTool extends AbstractDataPanelTool {
 
     Integer roiStart = null;
+    Integer roiEnd = null;
+    private int pressX = -1;
+    private boolean dragging = false;
     JButton roiButton;
 
     public RegionOfInterestTool(DataPanel owner, JButton roiButton) {
@@ -56,8 +63,100 @@ public class RegionOfInterestTool extends AbstractDataPanelTool {
         return (roiStart == null ? 0 : roiStart.intValue());
     }
 
+    public int getRoiEnd() {
+        return (roiEnd == null ? 0 : roiEnd.intValue());
+    }
+
+    public boolean isDragging() {
+        return dragging;
+    }
+
+    /**
+     * Create a {@link RegionOfInterest} from two chromosome positions,
+     * normalizing start/end order and guaranteeing a non-empty span.
+     * Package-private for unit testing; both the drag and click paths use it.
+     */
+    static RegionOfInterest createRegion(String chromosomeName, int posA, int posB) {
+        int start = Math.min(posA, posB);
+        int end = Math.max(posA, posB);
+        if (start == end) {
+            ++end;
+        }
+        return new RegionOfInterest(chromosomeName, start, end, null);
+    }
+
+    /**
+     * The mouse has been pressed.  Record the press position; the ROI start
+     * is only committed when the user actually drags (or clicks, see
+     * {@link #mouseClicked(MouseEvent)}).
+     */
+    @Override
+    public void mousePressed(final MouseEvent e) {
+        if (e.isPopupTrigger() || e.getButton() != MouseEvent.BUTTON1) {
+            return;
+        }
+        pressX = e.getX();
+        roiStart = null;
+        roiEnd = null;
+        dragging = false;
+    }
+
+    /**
+     * The mouse has been dragged while the ROI tool is active.  Commit the
+     * drag start (from the press position) and track the current end with
+     * live repaint feedback.
+     */
+    @Override
+    public void mouseDragged(final MouseEvent e) {
+        if (pressX < 0) {
+            return;
+        }
+        ReferenceFrame referenceFrame = this.getReferenceFame();
+        if (referenceFrame.getChromosome() == null || referenceFrame.getChrName() == null) {
+            return;
+        }
+        if (!dragging) {
+            roiStart = (int) referenceFrame.getChromosomePosition(pressX);
+            dragging = true;
+        }
+        roiEnd = (int) referenceFrame.getChromosomePosition(e.getX());
+        UIUtilities.invokeOnEventThread(() -> getOwner().paintImmediately(getOwner().getBounds()));
+    }
+
+    /**
+     * The mouse has been released.  If a drag was in progress, finalize the
+     * region of interest; otherwise leave the event for the click path.
+     */
+    @Override
+    public void mouseReleased(final MouseEvent e) {
+        if (!dragging) {
+            pressX = -1;
+            roiStart = null;
+            roiEnd = null;
+            return;
+        }
+        dragging = false;
+        pressX = -1;
+        try {
+            ReferenceFrame referenceFrame = this.getReferenceFame();
+            String chromosomeName = referenceFrame.getChrName();
+            if (chromosomeName == null || roiStart == null || roiEnd == null) {
+                return;
+            }
+            RegionOfInterest regionOfInterest = createRegion(chromosomeName, roiStart, roiEnd);
+            IGV.getInstance().endROI();
+            IGV.getInstance().addRegionOfInterest(regionOfInterest);
+            IGV.getInstance().repaint();
+        } finally {
+            roiStart = null;
+            roiEnd = null;
+            roiButton.setSelected(false);
+        }
+    }
+
     /**
      * The mouse has been clicked.  Define one edge of the region of interest.
+     * (Click-click fallback; drag-select is handled by press/drag/release.)
      */
     @Override
     public void mouseClicked(final MouseEvent e) {
@@ -95,20 +194,9 @@ public class RegionOfInterestTool extends AbstractDataPanelTool {
                         try {
 
                             int roiEnd = (int) referenceFrame.getChromosomePosition(x);
-                            int start = Math.min(roiStart, roiEnd);
-                            int end = Math.max(roiStart, roiEnd);
-
-                            if (start == end) {
-                                ++end;
-                            }
 
                             // Create a Region of Interest
-                            RegionOfInterest regionOfInterest =
-                                    new RegionOfInterest(
-                                            chromosomeName,
-                                            start,
-                                            end,
-                                            null);
+                            RegionOfInterest regionOfInterest = createRegion(chromosomeName, roiStart, roiEnd);
 
                             IGV.getInstance().endROI();
                             IGV.getInstance().addRegionOfInterest(regionOfInterest);

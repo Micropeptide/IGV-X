@@ -152,11 +152,22 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
 
             // If there is a partial ROI in progress draw it first
             if (currentTool instanceof RegionOfInterestTool) {
-                int startLoc = ((RegionOfInterestTool) currentTool).getRoiStart();
+                RegionOfInterestTool roiTool = (RegionOfInterestTool) currentTool;
+                int startLoc = roiTool.getRoiStart();
                 if (startLoc > 0) {
                     int start = frame.getScreenPosition(startLoc);
+                    int endLoc = roiTool.getRoiEnd();
+                    int end = endLoc > 0 ? frame.getScreenPosition(endLoc) : start;
+                    if (endLoc > 0 && end != start) {
+                        // Live translucent selection fill while dragging
+                        graphics2D.setColor(new Color(65, 105, 225, 60));
+                        graphics2D.fillRect(Math.min(start, end), 0, Math.abs(end - start), getHeight());
+                    }
                     g.setColor(Color.BLACK);
                     graphics2D.drawLine(start, 0, start, getHeight());
+                    if (endLoc > 0 && end != start) {
+                        graphics2D.drawLine(end, 0, end, getHeight());
+                    }
                 }
             }
 
@@ -667,15 +678,37 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
                 int zoomIncr = -wheelRotation / 2;
                 getFrame().doZoomIncrement(zoomIncr);
             }
-            //TODO Use this to pan. Seems weird, but it's how side scrolling on my mouse gets interpreted,
-            //so could be handy for people with 2D wheels
-//            else if(e.isShiftDown()){
-//                System.out.println(e);
-//            }
+            // IGV-X: horizontal swipe (two-finger trackpad / shift+wheel) pans left/right.
+            // On macOS a horizontal trackpad swipe arrives as a shift+wheel event, which
+            // stock IGV silently drops. Pan the view instead, honoring a sensitivity
+            // preference (pixels per wheel unit) and never breaking vertical scroll.
+            else if (e.isShiftDown() && isSwipePanEnabled()) {
+                double rotation = e.getPreciseWheelRotation();
+                int deltaPixels = (int) Math.round(-rotation * getSwipePanSensitivity());
+                if (deltaPixels != 0) {
+                    getFrame().shiftOriginPixelsPanning(deltaPixels);
+                }
+            }
             else {
                 //Default action if no modifier
                 e.getComponent().getParent().dispatchEvent(e);
             }
+        }
+
+        private boolean isSwipePanEnabled() {
+            return Boolean.parseBoolean(
+                    PreferencesManager.getPreferences().get(Constants.SWIPE_PAN_ENABLED, "true"));
+        }
+
+        private int getSwipePanSensitivity() {
+            int sensitivity = 100;
+            try {
+                sensitivity = Integer.parseInt(
+                        PreferencesManager.getPreferences().get(Constants.SWIPE_PAN_SENSITIVITY, "100"));
+            } catch (NumberFormatException ignored) {
+                // fall back to default
+            }
+            return Math.max(10, sensitivity);
         }
 
 
