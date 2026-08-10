@@ -29,8 +29,7 @@ import org.broad.igv.logging.LogManager;
 import org.broad.igv.logging.Logger;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.RecentUrlsSet;
-import org.broad.igv.ui.action.LoadFilesMenuAction;
-import org.broad.igv.ui.action.OpenSessionMenuAction;
+import org.broad.igv.ui.action.SmartOpenMenuAction;
 import org.broad.igv.ui.util.RecentFiles;
 import org.broad.igv.util.ResourceLocator;
 
@@ -79,7 +78,7 @@ public class WelcomePanel extends JPanel {
         center.add(title);
         center.add(Box.createVerticalStrut(6));
 
-        JLabel subtitle = new JLabel("Open a recent file below, or use File &gt; Load from File... to add data.");
+        JLabel subtitle = new JLabel("Open a recent file below, or use Open... to add files or sessions (auto-detected).");
         subtitle.setForeground(UIManager.getColor("Label.disabledForeground"));
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         center.add(subtitle);
@@ -134,17 +133,11 @@ public class WelcomePanel extends JPanel {
         buttonPanel.setOpaque(false);
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton openFileButton = new JButton("Open File...");
-        openFileButton.addActionListener(e ->
-                new LoadFilesMenuAction("Load from File...", KeyEvent.VK_L, igv)
-                        .actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "openFile")));
-        buttonPanel.add(openFileButton);
-
-        JButton openSessionButton = new JButton("Open Session...");
-        openSessionButton.addActionListener(e ->
-                new OpenSessionMenuAction("Open Session...", KeyEvent.VK_O, igv)
-                        .actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "openSession")));
-        buttonPanel.add(openSessionButton);
+        JButton openButton = new JButton("Open...");
+        openButton.addActionListener(e ->
+                new SmartOpenMenuAction("Open...", KeyEvent.VK_O, igv)
+                        .actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "open")));
+        buttonPanel.add(openButton);
 
         JButton clearButton = new JButton("Clear Recent Files");
         clearButton.addActionListener(e -> {

@@ -408,6 +408,10 @@ public class IGVSessionReader implements SessionReader {
                 }
 
                 Runnable runnable = () -> {
+                    // IGV-X: honor user cancellation of a stuck session load.
+                    if (IGV.hasInstance() && IGV.getInstance().isSessionLoadCancelled()) {
+                        return;
+                    }
                     try {
                         // igv.load() loads and initializes tracks, but does not allocate them to panels.
                         List<Track> tracks = igv.load(locator);
@@ -462,8 +466,17 @@ public class IGVSessionReader implements SessionReader {
             try {
                 executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
             } catch (InterruptedException ignore) {
-                log.error(ignore);
+                // IGV-X: user cancelled the load; stop queued work and do not wait.
+                log.info("Session load interrupted/cancelled");
+                executor.shutdownNow();
                 Thread.currentThread().interrupt();
+            }
+
+            // IGV-X: if the load was cancelled, skip the synchronous remainder
+            // and the error dialog; loadSession() handles the cancelled state.
+            if (IGV.hasInstance() && IGV.getInstance().isSessionLoadCancelled()) {
+                dataFiles = null;
+                return;
             }
 
             // Now load data that must be loaded synchronously

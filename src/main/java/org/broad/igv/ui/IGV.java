@@ -152,6 +152,40 @@ public class IGV implements IGVEventObserver {
     }
 
     /**
+     * IGV-X: cancellation state for a running session load.  When the user
+     * cancels a stuck/hung session open, this flag tells the session reader to
+     * stop loading remaining files, and the running worker thread is
+     * interrupted so blocking I/O can abort.  The welcome panel is restored so
+     * another session can be opened immediately.
+     */
+    private volatile boolean sessionLoadCancelled = false;
+    private volatile Thread sessionLoadThread = null;
+
+    public boolean isSessionLoadCancelled() {
+        return sessionLoadCancelled;
+    }
+
+    /**
+     * Cancel the session load currently in progress (if any).  Safe to call
+     * from the EDT.  Interrupts the worker thread and restores the welcome
+     * panel so the user can open a different session.
+     */
+    public void cancelSessionLoading() {
+        sessionLoadCancelled = true;
+        Thread t = sessionLoadThread;
+        if (t != null) {
+            t.interrupt();
+        }
+        resetStatusMessage();
+        if (menuBar != null) {
+            UIUtilities.invokeOnEventThread(() -> menuBar.setCancelSessionLoadEnabled(false));
+        }
+        if (contentPane != null) {
+            UIUtilities.invokeOnEventThread(() -> contentPane.showWelcomePanel(true));
+        }
+    }
+
+    /**
      * Timer for triggering periodic autosave of current session
      */
     private Timer sessionAutosaveTimer = new Timer();
@@ -1064,6 +1098,11 @@ public class IGV implements IGVEventObserver {
     public boolean loadSession(String sessionPath, String locus) {
 
         InputStream inputStream = null;
+        sessionLoadCancelled = false;
+        sessionLoadThread = Thread.currentThread();
+        if (menuBar != null) {
+            UIUtilities.invokeOnEventThread(() -> menuBar.setCancelSessionLoadEnabled(true));
+        }
         try {
             setStatusBarMessage("Opening session...");
 
@@ -1092,12 +1131,21 @@ public class IGV implements IGVEventObserver {
             return success;
 
         } catch (Exception e) {
+            // A cancelled load surfaces as an InterruptedException on the worker thread.
+            if (sessionLoadCancelled || Thread.currentThread().isInterrupted()) {
+                log.info("Session load cancelled: " + sessionPath);
+                return false;
+            }
             String message = "Error loading session session: " + e.getMessage();
             MessageUtils.showMessage(message);
             getRecentSessionList().remove(sessionPath);
             log.error(e);
             return false;
         } finally {
+            sessionLoadThread = null;
+            if (menuBar != null) {
+                UIUtilities.invokeOnEventThread(() -> menuBar.setCancelSessionLoadEnabled(false));
+            }
             if (inputStream != null) {
                 try {
                     inputStream.close();

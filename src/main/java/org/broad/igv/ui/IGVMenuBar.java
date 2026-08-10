@@ -119,6 +119,7 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
     private List<JComponent> encodeMenuItems = new ArrayList<>();
 
     private JMenuItem reloadSessionItem;
+    private JMenuItem cancelSessionLoadItem;
     private JMenuItem recentFilesMenu;
 
 
@@ -380,6 +381,13 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         reloadSessionItem = MenuAndToolbarUtils.createMenuItem(menuAction);
         reloadSessionItem.setEnabled(false);
         menuItems.add(reloadSessionItem);
+
+        // IGV-X: cancel a stuck session load, then open another session.
+        cancelSessionLoadItem = new JMenuItem("Cancel Session Loading");
+        cancelSessionLoadItem.setEnabled(false);
+        cancelSessionLoadItem.setToolTipText("Stop the session load that is currently in progress");
+        cancelSessionLoadItem.addActionListener(e -> igv.cancelSessionLoading());
+        menuItems.add(cancelSessionLoadItem);
 
         autosaveMenu = new AutosaveMenu();
         menuItems.add(autosaveMenu);
@@ -1276,6 +1284,16 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
     public void enableReloadSession() {
         this.reloadSessionItem.setEnabled(true);
+    }
+
+    /**
+     * IGV-X: enable/disable the "Cancel Session Loading" File menu item.
+     * Must be called on the EDT.
+     */
+    public void setCancelSessionLoadEnabled(boolean enabled) {
+        if (cancelSessionLoadItem != null) {
+            cancelSessionLoadItem.setEnabled(enabled);
+        }
     }
 
     public void showRecentFilesMenu(){
