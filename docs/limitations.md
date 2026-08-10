@@ -44,7 +44,10 @@ partially. Updated as features land; do not let this file go stale.
   data-panel highlight), high-quality PNG/SVG/PDF export (publication
   mode, selected tracks only), configurable quantitative-track default
   ranges, window-state memory, Preferences dialog polish + a11y, macOS
-  screen menu bar / fullscreen / app handlers / accelerators.
+  screen menu bar / fullscreen / app handlers / accelerators, organize
+  tracks by genotype (CG/CHG/CHH grouping + tint + editable rules,
+  commit 6c1d56b2b), wait-cursor watchdog on hung track loads
+  (commit 55a90d1a5).
 - **Not done**: dark mode (deliberately out of scope per charter),
   remaining stock-IGV dialog/track-header polish, deeper VoiceOver pass
   beyond the command bar / dialogs / track panel.

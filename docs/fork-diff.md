@@ -10,12 +10,21 @@ entry still applies (`git log --oneline -- <file>` per area).
   currently 3.0-dev — kept for future update analysis only).
 - **Tagging**: every IGV-X release is tagged on the `IGV-X` branch.
 - **Regenerate**: `git log upstream/2.19.X..IGV-X --oneline --no-merges`.
-  Count at last update: **31** IGV-X commits.
+  Count at last update: **40** IGV-X commits.
 
 ## Patch list (newest first)
 
 | ID | Commit | Area | Description | Status |
 |---|---|---|---|---|
+| P040 | 6c1d56b2b | ui | Organize tracks by genotype: editable rules (genotype regex+background, context regex+color), CG/CHG/CHH grouping with consistent colors, auto-derive genotypes, Ungrouped fallback; TrackGroup background tint | Landed |
+| P039 | 55a90d1a5 | ui | Wait-cursor fix: bookmark/highlight use lightweight repaint; 60s watchdog releases cursor on hung track loads | Landed |
+| P038 | 12dfd0eaa | docs | Document batch track import (CHANGELOG, changes-vs-igv, whats-different) | Landed |
+| P037 | 6640163af | ui | Batch track import: File > Open Folder of Tracks... recursive scanner + chooser (type filter, Select All/Clear, Load Selected/All); index/hidden files excluded | Landed |
+| P036 | 987ce33cd | docs | Document Arabidopsis tair10 gene lists | Landed |
+| P035 | d422f0f29 | ui | Arabidopsis (tair10) gene lists in View > Gene Lists: 6 curated pathway lists, AGIs verified against real TAIR10 GTF | Landed |
+| P034 | de583ccb7 | session | Unified Open on welcome panel (SmartOpenMenuAction); File > Cancel Session Loading with clean interruption | Landed |
+| P033 | 1f2cbfc89 | docs | docs/changes-vs-igv.md — complete detailed change record vs stock IGV | Landed |
+| P032 | cf35bfe55 | docs | Docs finalization: full fork-diff patch list + feature→file map; limitations/whats-different refreshed | Landed |
 | P031 | 32f84d59e | packaging | Reproducible release build script (scripts/package/build_release.sh): fresh bundle, stale-app cleanup, codesign, DMG+ZIP, SHA256SUMS, version.txt, verification | Landed |
 | P030 | 7c91b16ab | ui | Window state memory (maximized flag + last normal bounds), Preferences dialog resizable + a11y + system font, accessible track panel + diagnose report | Landed |
 | P029 | ea6a25a8e | ui | macOS integration: screen menu bar, fullscreen, app handlers, platform accelerators; VoiceOver names on command bar | Landed |
@@ -57,6 +66,10 @@ entry still applies (`git log --oneline -- <file>` per area).
 | Bookmarks/export (P024–P025) | `src/main/java/org/broad/igv/ui/BookmarkManager*.java`, export panel classes |
 | Diagnostics (P028) | `src/main/java/org/broad/igv/diagnostic/`, `ExceptionRateLimiter` |
 | macOS UI (P029–P030) | `IGVMenuBar`, `IGV`, `MenuAction`, `CommandBarAccessibility`, `PreferencesEditor`, `TrackNamePanel` |
+| Gene lists (P035) | `src/main/resources/org/broad/igv/ui/util/tair10.gmt`, `GeneListManager`, `Tair10GeneListTest` |
+| Batch import (P037) | `src/main/java/org/broad/igv/ui/util/TrackFolderScanner.java`, menu wiring, `TrackFolderScannerTest` |
+| Organize by genotype (P040) | `src/main/java/org/broad/igv/organize/` (OrganizeRules, TrackClassifier, TrackOrganizer, OrganizeTracksDialog), `TrackGroup` background, organize tests |
+| Wait-cursor watchdog (P039) | `IGV.java` (repaint paths + orTimeout watchdog), `BookmarkManagerDialog` |
 | Launcher (P014) | `scripts/mac.app/Contents/MacOS/IGV` |
 | Packaging (P031) | `scripts/package/build_release.sh`, `scripts/package/README.md`, `docs/release.md` |
 

@@ -30,7 +30,7 @@ preferences, caches, and logs).
 - **Unified smart Open**: one File > Open dialog routes files vs sessions automatically.
 - **Unsaved-session close confirmation**: closing with unsaved changes asks first (all exit paths).
 - **Recent-files history + welcome panel**: every open path records history; double-click to reopen.
-- **Persistent bookmarks + region highlights**: saved with the session, per-region colors.
+- **Persistent bookmarks + region highlights**: saved with the session, per-region colors. Saving a bookmark no longer blocks the UI — it uses a lightweight repaint, and a 60-second watchdog releases the wait cursor if any track load genuinely hangs (e.g. OneDrive cloud placeholders), so the cursor can never spin forever.
 
 ## Navigation & region selection
 
@@ -52,6 +52,25 @@ preferences, caches, and logs).
   (subfolders included) for track files (bigWig/bigBed/BAM/CRAM/VCF/BED/GFF/
   GTF/WIG/TDF/...), shows a chooser with type filter + Select All/Clear +
   Load Selected/Load All. Index and hidden files excluded.
+
+## Organize tracks by genotype
+
+- **Tracks > Organize Tracks by Genotype...**: one click groups WGBS tracks by
+  genotype — each genotype gets a background tint + border, and within each
+  genotype tracks are ordered CG → CHG → CHH with colors that stay
+  consistent across genotypes (defaults: CG blue, CHG orange, CHH green).
+- **Editable, remembered rules**: the dialog has two tables — genotype rules
+  (name + name-pattern regex + background color) and context rules (name +
+  regex + color). Add/remove rows, edit patterns/colors; Apply saves to
+  preferences and reorganizes immediately.
+- Tracks matching no genotype rule are auto-grouped from the name prefix
+  before the methylation-context token; no-context tracks land in Ungrouped.
+  No-context names are never guessed into a genotype.
+- Context tokens match plain case-insensitive strings (`CG`, `CHG`, `CHH`),
+  so names like `col0_CG.bw` work.
+- An **Auto-organize** checkbox is in the dialog (default off); turning it
+  on is the planned hook to auto-run the organize step after session/batch
+  loads.
 
 ## Export
 

@@ -11,6 +11,27 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 
 ### Added
 
+### Added (IGV-X organize tracks by genotype)
+- **Tracks > Organize Tracks by Genotype...** (commit `6c1d56b2b`): group
+  tracks by genotype — each genotype gets a background tint + border; within
+  each genotype tracks are ordered CG → CHG → CHH with colors consistent
+  across genotypes (defaults: CG blue, CHG orange, CHH green). Editable,
+  remembered rules (`IGVX.ORGANIZE.RULES` prefs): genotype rules (name-pattern
+  regex + background color) and context rules (regex + color), add/remove/edit
+  in the dialog, Apply saves + reorganizes. Genotypes auto-derived from the
+  name prefix before the context token; no-context tracks → Ungrouped (never
+  guessed). Plain case-insensitive context tokens (word boundaries would fail
+  on names like `col0_CG`). New `org.broad.igv.organize` package
+  (`OrganizeRules`, `TrackClassifier`, `TrackOrganizer`, `OrganizeTracksDialog`),
+  `TrackGroup` background support; 15 regression tests.
+
+### Added (IGV-X wait-cursor watchdog)
+- **Stuck wait cursor after Save Bookmark fixed** (commit `55a90d1a5`):
+  bookmark add/remove/highlight now use a lightweight overlay repaint (no
+  track loads, no wait cursor); the async repaint path got a 60-second
+  `orTimeout` watchdog that releases the wait cursor and resets `isLoading`
+  when a track load hangs (e.g. OneDrive cloud placeholders).
+
 ### Added (IGV-X batch track import)
 - **File > Open Folder of Tracks...**: pick a folder and IGV-X recursively scans
   it (subfolders included) for loadable track files, shows a chooser dialog

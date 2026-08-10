@@ -107,6 +107,14 @@ silently discarding. (Commit `0f88e2d77`.)
 Every open path records history; the welcome panel offers recent sessions
 and files to double-click and reopen. (Commit `84b65b725`.)
 
+### 3.7 Cancel session loading + unified Open on welcome panel
+
+File > **Cancel Session Loading** is enabled while a session loads; it stops
+queuing more files, skips the error dialog, and returns cleanly so another
+session can open immediately. The welcome panel uses the same unified
+`SmartOpenMenuAction` as File > Open (auto-detects files vs sessions).
+(Commit `de583ccb7`.)
+
 ## 4. Navigation and interaction
 
 ### 4.0 Arabidopsis (TAIR10) gene lists (commit `d422f0f29`)
@@ -152,6 +160,38 @@ all subfolders for loadable track files and opens a chooser dialog listing
 every file (name, type), with a type filter, Select All / Clear, Load Selected
 and Load All. Index files and hidden files are never offered. Backed by a pure
 `TrackFolderScanner` (headless-testable) and `TrackFolderScannerTest`.
+
+### 4.7 Organize tracks by genotype (commit `6c1d56b2b`)
+
+Tracks > **Organize Tracks by Genotype...** groups WGBS tracks by genotype:
+each genotype gets a background tint + border, and within each genotype
+tracks are ordered CG → CHG → CHH with colors consistent across genotypes
+(defaults: CG blue `#1f77b4`, CHG orange `#ff7f0e`, CHH green `#2ca02c`).
+
+The rules are editable and remembered (prefs `IGVX.ORGANIZE.RULES`): a
+dialog shows two tables — genotype rules (name, name-pattern regex,
+background color) and context rules (name, regex, color) — with add/remove
+rows and an Apply that saves and reorganizes immediately. Genotypes with no
+matching rule are auto-derived from the track-name prefix before the
+context token; tracks with no context token go to **Ungrouped** (never
+guessed). Context tokens match plain case-insensitive strings, so names
+like `col0_CG.bw` work (`\b` word boundaries would not — underscore is a
+word char). An **Auto-organize** checkbox (default off) is the planned hook
+to auto-run after session/batch loads.
+
+New `org.broad.igv.organize` package: `OrganizeRules` (JSON persistence),
+`TrackClassifier` (first-match-wins), `TrackOrganizer` (rebuilds
+`TrackGroup`s; per-genotype background via `TrackGroup.setBackground`),
+`OrganizeTracksDialog`. 15 regression tests.
+
+### 4.8 Wait-cursor watchdog on bookmarks/highlights (commit `55a90d1a5`)
+
+Saving a bookmark used to trigger a full track-loading repaint; if any load
+hung (e.g. OneDrive cloud placeholders), the wait cursor spun forever and
+`isLoading` never reset. Bookmark add/remove/highlight now use a lightweight
+overlay repaint (no track loads), and the async repaint path has a 60-second
+`orTimeout` watchdog that releases the wait cursor and resets `isLoading`
+(load continues in background; data appears when it arrives).
 
 ## 5. High-quality export
 
