@@ -11,6 +11,15 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 
 ### Added
 
+### Added (IGV-X Arabidopsis gene lists)
+- **Bundled Arabidopsis (TAIR10) gene lists** in the gene-list dialog (View >
+  Gene Lists…): curated `tair10.gmt` with 6 pathway lists — DNA methylation
+  core, RdDM pathway, small RNA machinery, histone marks & readers,
+  imprinting/DME pathway, flowering time. Every AGI code was verified against
+  the real TAIR10 GTF before shipping. Registered in
+  `GeneListManager.DEFAULT_GENE_LISTS`; regression test `Tair10GeneListTest`
+  (registration, GMT parse, AGI well-formedness/uniqueness, expected lists).
+
 ### Added (IGV-X reproducible release packaging)
 - **`scripts/package/build_release.sh`**: one-command reproducible macOS release
   packaging — release gate (full test suite), fresh `WithJava` bundle build

@@ -34,6 +34,10 @@ preferences, caches, and logs).
 
 ## Navigation & region selection
 
+- **Arabidopsis (TAIR10) gene lists built in**: View > Gene Lists… includes a
+  bundled Arabidopsis group with 6 curated pathway lists (DNA methylation core,
+  RdDM, small RNA, histone marks, imprinting/DME, flowering) — every AGI
+  verified against the real TAIR10 GTF.
 - **Trackpad navigation**: two-finger horizontal swipe pans the view (configurable sensitivity;
   `IGVX.SWIPE_PAN_ENABLED` / `IGVX.SWIPE_PAN_SENSITIVITY`). Vertical scroll is untouched.
 - **ROI drag-select**: press-drag-release draws a live region selection; the classic two-click method still works.

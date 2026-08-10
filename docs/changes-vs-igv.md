@@ -109,6 +109,15 @@ and files to double-click and reopen. (Commit `84b65b725`.)
 
 ## 4. Navigation and interaction
 
+### 4.0 Arabidopsis (TAIR10) gene lists (commit `d422f0f29`)
+
+View > Gene Lists… now includes a bundled **Arabidopsis (tair10)** group with
+6 curated pathway lists: DNA methylation core, RdDM pathway, small RNA
+machinery, histone marks & readers, imprinting/DME pathway, flowering time.
+Every AGI code was verified against the real TAIR10 GTF before shipping
+(no dead symbols). Load any list and use the search box to jump to its genes.
+Regression-tested by `Tair10GeneListTest`.
+
 ### 4.1 Trackpad navigation
 
 Two-finger **horizontal swipe pans the view** (works on trackpads and
