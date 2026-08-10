@@ -20,3 +20,5 @@
 # Scratch / local test outputs
 /tmp-test/
 /igvx-session-*.xml
+# Public test-file downloads (large, NOT committed; see docs/test-files-manifest.md for how to obtain)
+/test-data/
