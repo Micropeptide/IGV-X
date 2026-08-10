@@ -632,10 +632,27 @@ public class IGV implements IGVEventObserver {
     }
 
     final public void saveImage(Component target, String title, String extension) {
-        if ("png".equalsIgnoreCase(extension) || "svg".equalsIgnoreCase(extension)) {
+        if ("png".equalsIgnoreCase(extension) || "svg".equalsIgnoreCase(extension)
+                || "pdf".equalsIgnoreCase(extension)) {
             contentPane.getStatusBar().setMessage("Creating image...");
             File defaultFile = new File(title + "." + extension);
             createSnapshot(target, defaultFile);
+        }
+    }
+
+    /**
+     * IGV-X: save an image with publication-quality options (DPI, selected tracks only,
+     * publication mode). Options are applied for this export then reset.
+     */
+    final public void saveImage(Component target, String title, String extension, int dpi,
+                                boolean selectedTracksOnly, boolean publicationMode) {
+        try {
+            SnapshotOptions.setDpi(dpi);
+            SnapshotOptions.setSelectedTracksOnly(selectedTracksOnly);
+            SnapshotOptions.setPublicationMode(publicationMode);
+            saveImage(target, title, extension);
+        } finally {
+            SnapshotOptions.reset();
         }
     }
 
@@ -693,7 +710,7 @@ public class IGV implements IGVEventObserver {
             log.error(message);
             return message;
         } else if (type == ImageFileTypes.Type.EPS || type == ImageFileTypes.Type.JPEG) {
-            String message = "ERROR: " + type + " output is not supported.  Try '.png' or '.svg'";
+            String message = "ERROR: " + type + " output is not supported.  Try '.png', '.svg', or '.pdf'";
             log.error(message);
             return message;
         }

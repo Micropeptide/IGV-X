@@ -388,6 +388,18 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText(SAVE_SVG_IMAGE_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: publication-quality export with DPI, format, selected-tracks-only, and
+        // clean-figure (publication) options
+        menuAction =
+                new MenuAction("Save Publication Image ...", null) {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        showPublicationSaveDialog();
+                    }
+                };
+        menuAction.setToolTipText("Export a publication-quality image (PNG/SVG/PDF) with options");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         // TODO -- change "Exit" to "Close" for BioClipse
         menuItems.add(new JSeparator());      // Exit
         menuAction =
@@ -1288,6 +1300,48 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
             MessageUtils.showErrorMessage("Error writing to file", e);
             log.error(e);
         }
+    }
+
+    /**
+     * IGV-X: publication-quality image export dialog.
+     * Lets the user pick format (PNG/SVG/PDF), DPI (PNG), selected-tracks-only,
+     * and clean publication mode before saving.
+     */
+    private void showPublicationSaveDialog() {
+        JComboBox<String> formatBox = new JComboBox<>(new String[]{"png", "svg", "pdf"});
+        formatBox.setSelectedItem("png");
+
+        JTextField dpiField = new JTextField("300");
+
+        JCheckBox selectedOnlyBox = new JCheckBox("Selected tracks only", false);
+        JCheckBox publicationBox = new JCheckBox("Publication mode (no ROI bars, no group gaps)", false);
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Format:"));
+        panel.add(formatBox);
+        panel.add(new JLabel("DPI (PNG only):"));
+        panel.add(dpiField);
+        panel.add(selectedOnlyBox);
+        panel.add(new JLabel());
+        panel.add(publicationBox);
+        panel.add(new JLabel());
+
+        int result = JOptionPane.showConfirmDialog(igv.getMainFrame(), panel, "Save Publication Image",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String format = (String) formatBox.getSelectedItem();
+        int dpi = 96;
+        try {
+            dpi = Integer.parseInt(dpiField.getText().trim());
+        } catch (NumberFormatException ignored) {
+            dpi = 96;
+        }
+
+        igv.saveImage(igv.getMainPanel(), "igv_publication", format, dpi,
+                selectedOnlyBox.isSelected(), publicationBox.isSelected());
     }
 
 }

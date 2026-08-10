@@ -53,6 +53,7 @@ import org.broad.igv.ui.UIConstants;
 import org.broad.igv.ui.WaitCursorManager;
 import org.broad.igv.ui.util.DataPanelTool;
 import org.broad.igv.ui.util.MessageUtils;
+import org.broad.igv.ui.util.SnapshotOptions;
 
 import javax.swing.*;
 import javax.swing.event.MouseInputAdapter;
@@ -298,6 +299,10 @@ public class DataPanel extends JComponent implements Paintable, IGVEventObserver
         }
 
         boolean drawBars = PreferencesManager.getPreferences().getAsBoolean(Constants.SHOW_REGION_BARS);
+        // IGV-X: publication mode suppresses ROI bars (clean figures)
+        if (SnapshotOptions.isPublicationMode()) {
+            drawBars = false;
+        }
         Graphics2D graphics2D = (Graphics2D) g.create();
         try {
 

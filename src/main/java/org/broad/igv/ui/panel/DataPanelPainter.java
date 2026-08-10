@@ -40,6 +40,7 @@ import org.broad.igv.sam.InsertionMarker;
 import org.broad.igv.track.*;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.UIConstants;
+import org.broad.igv.ui.util.SnapshotOptions;
 
 import java.awt.*;
 import java.util.*;
@@ -143,19 +144,38 @@ public class DataPanelPainter {
             }
 
             if (group.isVisible()) {
-                if (groups.size() > 1) {
+                List<Track> trackList = group.getVisibleTracks();
+
+                // IGV-X: selected-tracks-only export filters the visible list here
+                boolean selectedOnly = SnapshotOptions.isSelectedTracksOnly();
+                if (selectedOnly) {
+                    List<Track> selected = new ArrayList<>();
+                    synchronized (trackList) {
+                        for (Track t : trackList) {
+                            if (t != null && t.isSelected()) {
+                                selected.add(t);
+                            }
+                        }
+                    }
+                    trackList = selected;
+                }
+
+                if (selectedOnly && trackList.isEmpty()) {
+                    continue;   // skip gap/border for groups with no selected tracks
+                }
+
+                if (groups.size() > 1 && !(selectedOnly && SnapshotOptions.isPublicationMode())) {
                     final Graphics2D greyGraphics = dContext.getGraphic2DForColor(UIConstants.LIGHT_GREY);
                     greyGraphics.fillRect(0, trackY + 1, dRect.width, UIConstants.groupGap - 1);
                     trackY += UIConstants.groupGap;
                 }
 
                 // Draw a line just above group.
-                if (group.isDrawBorder()) {
+                if (group.isDrawBorder() && !(selectedOnly && SnapshotOptions.isPublicationMode())) {
                     Graphics2D graphics2D = dContext.getGraphic2DForColor(Color.black);
                     graphics2D.drawLine(0, trackY - 1, dRect.width, trackY - 1);
                 }
 
-                List<Track> trackList = group.getVisibleTracks();
                 synchronized (trackList) {
                     for (Track track : trackList) {
                         if (track == null) continue;

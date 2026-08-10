@@ -36,6 +36,7 @@ import org.broad.igv.track.Track;
 import org.broad.igv.track.TrackGroup;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.UIConstants;
+import org.broad.igv.ui.util.SnapshotOptions;
 
 import java.awt.*;
 import java.util.List;
@@ -472,6 +473,48 @@ public class TrackPanel extends IGVPanel {
                         height += UIConstants.groupGap;
                     }
                     height += group.getHeight();
+                }
+            }
+        }
+
+        return Math.max(20, height);
+    }
+
+    /**
+     * IGV-X: preferred height considering only currently selected tracks.
+     * Used by selected-tracks-only image export so the output has no empty space.
+     */
+    public int getPreferredPanelHeightSelectedOnly() {
+        int height = 0;
+
+        Collection<TrackGroup> groups = getGroups();
+        boolean multiple = groups.size() > 1 && !SnapshotOptions.isPublicationMode();
+
+        if (multiple) {
+            height += UIConstants.groupGap;
+        }
+
+        synchronized (groups) {
+            for (TrackGroup group : groups) {
+                if (group == null || !group.isVisible()) {
+                    continue;
+                }
+                List<Track> selected = new ArrayList<>();
+                synchronized (group.getVisibleTracks()) {
+                    for (Track t : group.getVisibleTracks()) {
+                        if (t != null && t.isSelected()) {
+                            selected.add(t);
+                        }
+                    }
+                }
+                if (selected.isEmpty()) {
+                    continue;
+                }
+                if (multiple) {
+                    height += UIConstants.groupGap;
+                }
+                for (Track t : selected) {
+                    height += t.getHeight();
                 }
             }
         }

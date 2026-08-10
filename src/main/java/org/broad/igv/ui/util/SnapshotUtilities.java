@@ -35,6 +35,9 @@ package org.broad.igv.ui.util;
 
 import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.transcoder.TranscoderInput;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.broad.igv.logging.*;
 import org.broad.igv.ui.panel.Paintable;
 import org.w3c.dom.DOMImplementation;
@@ -45,6 +48,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
+import static org.broad.igv.ui.util.ImageFileTypes.Type.PDF;
 import static org.broad.igv.ui.util.ImageFileTypes.Type.PNG;
 import static org.broad.igv.ui.util.ImageFileTypes.Type.SVG;
 
@@ -99,17 +103,23 @@ public class SnapshotUtilities {
             int width = component.getWidth();
             int height = paintable.getSnapshotHeight(batch);
 
+            // Publication mode forces full (batch) height rendering
+            boolean effectiveBatch = batch || SnapshotOptions.isPublicationMode();
+
             // Call appropriate converter
             if (type == SVG) {
-                exportScreenshotSVG((Paintable) component, file, width, height, batch);
+                exportScreenshotSVG((Paintable) component, file, width, height, effectiveBatch);
                 return "OK";
             } else if (type == PNG) {
                 String format = "png";
                 String[] exts = new String[]{"." + format};
-                exportScreenShotBufferedImage((Paintable) component, file, width, height, exts, format, batch);
+                exportScreenShotBufferedImage((Paintable) component, file, width, height, exts, format, effectiveBatch);
+                return "OK";
+            } else if (type == PDF) {
+                exportScreenshotPDF((Paintable) component, file, width, height, effectiveBatch);
                 return "OK";
             } else {
-                final String message = "No image write for file type: " + file + " Try '.png' or '.svg'";
+                final String message = "No image write for file type: " + file + " Try '.png', '.svg', or '.pdf'";
                 MessageUtils.showMessage(message);
                 return "ERROR: " + message;
             }
@@ -163,14 +173,23 @@ public class SnapshotUtilities {
     private static void exportScreenShotBufferedImage(Paintable target, File selectedFile, int width, int height,
                                                       String[] allowedExts, String format, boolean batch) throws IOException {
 
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        // IGV-X: honor requested DPI for high-resolution (publication) exports
+        double scale = SnapshotOptions.getDpi() / 96.0;
+        int scaledWidth = (int) Math.max(1, Math.round(width * scale));
+        int scaledHeight = (int) Math.max(1, Math.round(height * scale));
+
+        BufferedImage image = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = image.createGraphics();
 
         // Start with a white background
         Color c = g.getColor();
         g.setColor(Color.white);
-        g.fillRect(0, 0, width, height);
+        g.fillRect(0, 0, scaledWidth, scaledHeight);
         g.setColor(c);
+
+        if (scale != 1.0) {
+            g.scale(scale, scale);
+        }
 
         paintImage(target, g, width, height, batch);
 
@@ -182,6 +201,34 @@ public class SnapshotUtilities {
                 MessageUtils.showMessage("Error writing image file of type: " + format + ". Try .png or .svg");
             }
         }
+    }
+
+    /**
+     * IGV-X: export the target component as a PDF file. The component is painted
+     * into a high-resolution BufferedImage (honoring SnapshotOptions DPI), then
+     * embedded into a minimal single-page PDF. Dependency-free (no iText/Batik
+     * PDFTranscoder required) and readable by Preview, Acrobat, etc.
+     */
+    private static void exportScreenshotPDF(Paintable target, File selectedFile, int width, int height, boolean batch) throws IOException {
+
+        String format = "pdf";
+        selectedFile = fixFileExt(selectedFile, new String[]{format}, format);
+
+        double scale = SnapshotOptions.getDpi() / 96.0;
+        int imageWidth = (int) Math.max(1, Math.round(width * scale));
+        int imageHeight = (int) Math.max(1, Math.round(height * scale));
+
+        BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(Color.white);
+        g.fillRect(0, 0, imageWidth, imageHeight);
+        if (scale != 1.0) {
+            g.scale(scale, scale);
+        }
+        paintImage(target, g, width, height, batch);
+        g.dispose();
+
+        MinimalPdfWriter.writeImagePdf(selectedFile, image, SnapshotOptions.getDpi());
     }
 
 

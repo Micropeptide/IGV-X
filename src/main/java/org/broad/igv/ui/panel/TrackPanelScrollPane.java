@@ -31,6 +31,7 @@ package org.broad.igv.ui.panel;
 
 import com.jidesoft.swing.JideScrollPane;
 import org.broad.igv.logging.*;
+import org.broad.igv.ui.util.SnapshotOptions;
 import org.broad.igv.ui.util.SnapshotUtilities;
 
 import javax.swing.*;
@@ -151,7 +152,10 @@ public class TrackPanelScrollPane extends JideScrollPane implements Paintable {
             if (maxPanelHeight <= 0) {
                 panelHeight = scrollPaneHeight;
             } else {
-                int contentHeight = trackPanel.getPreferredPanelHeight();
+                // IGV-X: selected-tracks-only export shrinks height to the selected tracks
+                int contentHeight = SnapshotOptions.isSelectedTracksOnly()
+                        ? trackPanel.getPreferredPanelHeightSelectedOnly()
+                        : trackPanel.getPreferredPanelHeight();
                 panelHeight = Math.min(maxPanelHeight, Math.max(scrollPaneHeight, contentHeight));
             }
             return panelHeight;
