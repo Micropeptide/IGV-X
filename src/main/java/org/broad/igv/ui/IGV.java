@@ -305,6 +305,9 @@ public class IGV implements IGVEventObserver {
         }
         mainFrame.setBounds(applicationBounds);
 
+        // IGV-X: enable the macOS green-button fullscreen (Zoom -> Enter Full Screen)
+        DesktopIntegration.enableFullscreen(mainFrame);
+
         subscribeToEvents();
 
 

@@ -68,6 +68,17 @@ import java.io.IOException;
 /**
  * @author jrobinso
  */
+/**
+ * IGV-X accessibility helpers: icon-only toolbar buttons need explicit
+ * accessible names for VoiceOver / assistive technology to describe them.
+ */
+class CommandBarAccessibility {
+    static void setAccessibleName(javax.swing.JComponent component, String name) {
+        component.getAccessibleContext().setAccessibleName(name);
+        component.getAccessibleContext().setAccessibleDescription(name);
+    }
+}
+
 public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserver {
 
     private static Logger log = LogManager.getLogger(IGVCommandBar.class);
@@ -371,6 +382,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
 
         searchTextField = new SearchTextField();
         searchTextField.setMaximumSize(new java.awt.Dimension(250, 15));
+        searchTextField.getAccessibleContext().setAccessibleName("Search for gene or locus");
         searchTextField.setMinimumSize(new java.awt.Dimension(100, 28));
         searchTextField.setPreferredSize(new java.awt.Dimension(230, 28));
         searchTextField.setAlignmentY(CENTER_ALIGNMENT);
@@ -385,6 +397,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         // goButton.setMinimumSize(new java.awt.Dimension(30, 30));
         // goButton.setText("Go");
         goButton.setToolTipText("Jump to gene or locus");
+        CommandBarAccessibility.setAccessibleName(goButton, "Jump to gene or locus");
         goButton.addActionListener(new java.awt.event.ActionListener() {
 
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -412,6 +425,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         homeButton.setMinimumSize(new java.awt.Dimension(32, 32));
         homeButton.setPreferredSize(new java.awt.Dimension(32, 32));
         homeButton.setToolTipText("Jump to whole genome view");
+        CommandBarAccessibility.setAccessibleName(homeButton, "Jump to whole genome view");
         homeButton.addActionListener(evt -> homeButtonActionPerformed(evt));
         toolPanel.add(homeButton, JideBoxLayout.FIX);
 
@@ -423,6 +437,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         //backButton.setBorder(toolButtonBorder);
         backButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/left-arrow.gif")));
         backButton.setToolTipText("Go back");
+        CommandBarAccessibility.setAccessibleName(backButton, "Go back");
         backButton.setMaximumSize(new java.awt.Dimension(32, 32));
         backButton.setMinimumSize(new java.awt.Dimension(32, 32));
         backButton.setPreferredSize(new java.awt.Dimension(32, 32));
@@ -438,6 +453,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         //forwardButton.setBorder(toolButtonBorder);
         forwardButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/right-arrow.gif")));
         forwardButton.setToolTipText("Go forward");
+        CommandBarAccessibility.setAccessibleName(forwardButton, "Go forward");
         forwardButton.setMaximumSize(new java.awt.Dimension(32, 32));
         forwardButton.setMinimumSize(new java.awt.Dimension(32, 32));
         forwardButton.setPreferredSize(new java.awt.Dimension(32, 32));
@@ -458,6 +474,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         refreshButton.setMinimumSize(new java.awt.Dimension(32, 32));
         refreshButton.setPreferredSize(new java.awt.Dimension(32, 32));
         refreshButton.setToolTipText("Reload tracks and refresh the screen");
+        CommandBarAccessibility.setAccessibleName(refreshButton, "Reload tracks and refresh the screen");
         refreshButton.addActionListener(evt -> refreshButtonActionPerformed(evt));
         toolPanel.add(refreshButton, JideBoxLayout.FIX);
 
@@ -470,6 +487,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         //roiToggleButton.setBorder(toolButtonBorder);
         roiToggleButton.setAlignmentX(RIGHT_ALIGNMENT);
         roiToggleButton.setToolTipText("Define a region of interest.");
+        CommandBarAccessibility.setAccessibleName(roiToggleButton, "Define a region of interest");
         roiToggleButton.setMaximumSize(new java.awt.Dimension(32, 32));
         roiToggleButton.setMinimumSize(new java.awt.Dimension(32, 32));
         roiToggleButton.setPreferredSize(new java.awt.Dimension(32, 32));
@@ -491,6 +509,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         fitToWindowButton.setMinimumSize(new java.awt.Dimension(32, 32));
         fitToWindowButton.setPreferredSize(new java.awt.Dimension(32, 32));
         fitToWindowButton.setToolTipText("Resize tracks to fit in window.");
+        CommandBarAccessibility.setAccessibleName(fitToWindowButton, "Resize tracks to fit in window");
         fitToWindowButton.addActionListener(new java.awt.event.ActionListener() {
 
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -507,6 +526,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         //detailsBehaviorButton.setBorder(toolButtonBorder);
         detailsBehaviorButton.setAlignmentX(RIGHT_ALIGNMENT);
         detailsBehaviorButton.setToolTipText(MODIFY_DETAILS_TOOLTIP);
+        CommandBarAccessibility.setAccessibleName(detailsBehaviorButton, MODIFY_DETAILS_TOOLTIP);
         detailsBehaviorButton.setMaximumSize(new java.awt.Dimension(32, 32));
         detailsBehaviorButton.setMinimumSize(new java.awt.Dimension(32, 32));
         detailsBehaviorButton.setPreferredSize(new java.awt.Dimension(32, 32));
@@ -518,6 +538,7 @@ public class IGVCommandBar extends javax.swing.JPanel implements IGVEventObserve
         rulerLineButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/vertical-line.gif")));
         rulerLineButton.setAlignmentX(RIGHT_ALIGNMENT);
         rulerLineButton.setToolTipText("Enable ruler line in data panels");
+        CommandBarAccessibility.setAccessibleName(rulerLineButton, "Enable ruler line in data panels");
         rulerLineButton.setMaximumSize(new java.awt.Dimension(32, 32));
         rulerLineButton.setMinimumSize(new java.awt.Dimension(32, 32));
         rulerLineButton.setPreferredSize(new java.awt.Dimension(32, 32));

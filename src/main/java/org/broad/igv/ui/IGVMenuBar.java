@@ -71,6 +71,7 @@ import javax.swing.*;
 import javax.swing.event.MenuEvent;
 import javax.swing.plaf.basic.BasicBorders;
 import java.awt.*;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -135,6 +136,10 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         return instance;
     }
 
+    public IGV getIgv() {
+        return igv;
+    }
+
     private IGVMenuBar(IGV igv) {
         this.igv = igv;
         setBorder(new BasicBorders.MenuBarBorder(Color.GRAY, Color.GRAY));
@@ -150,7 +155,7 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         //from the command bar does what we want.
         if (Globals.IS_MAC) {
             DesktopIntegration.setAboutHandler(this);
-            DesktopIntegration.setQuitHandler();
+            DesktopIntegration.installMacAppHandlers(this);
         }
     }
 
@@ -300,10 +305,12 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
         // Load menu items — IGV-X: unified smart Open (files + sessions auto-routed)
         menuAction = new SmartOpenMenuAction("Open...", KeyEvent.VK_O, igv);
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(UIConstants.LOAD_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
         menuAction = new LoadFromURLMenuAction(LoadFromURLMenuAction.LOAD_FROM_URL, KeyEvent.VK_U, igv);
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(UIConstants.LOAD_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
@@ -357,10 +364,12 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
         // Session menu items
         menuAction = new NewSessionMenuAction("New Session...", KeyEvent.VK_N, igv);
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(UIConstants.NEW_SESSION_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
         menuAction = new SaveSessionMenuAction("Save Session...", KeyEvent.VK_V, igv);
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(UIConstants.SAVE_SESSION_TOOLTIP);
         JMenuItem saveSessionItem = MenuAndToolbarUtils.createMenuItem(menuAction);
         menuItems.add(saveSessionItem);
@@ -424,6 +433,8 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
                         doExitApplication();
                     }
                 };
+        menuAction.putValue(Action.ACCELERATOR_KEY,
+                KeyStroke.getKeyStroke(KeyEvent.VK_Q, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
 
         menuAction.setToolTipText(EXIT_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
@@ -631,6 +642,8 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
                         });
                     }
                 };
+        menuAction.putValue(Action.ACCELERATOR_KEY,
+                KeyStroke.getKeyStroke(KeyEvent.VK_COMMA, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(PREFERENCE_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 

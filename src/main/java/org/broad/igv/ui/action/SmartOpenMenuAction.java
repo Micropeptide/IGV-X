@@ -64,7 +64,7 @@ public class SmartOpenMenuAction extends MenuAction {
     public void actionPerformed(ActionEvent e) {
         File[] files = chooseFiles();
         if (files != null && files.length > 0) {
-            openFiles(files);
+            openFiles(igv, files);
         }
     }
 
@@ -78,7 +78,7 @@ public class SmartOpenMenuAction extends MenuAction {
         return files;
     }
 
-    private void openFiles(File[] files) {
+    public static void openFiles(IGV igv, File[] files) {
         final List<File> validFiles = new ArrayList<>();
         final List<File> missingFiles = new ArrayList<>();
         for (File file : files) {

@@ -11,6 +11,12 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 
 ### Added
 
+### Added (IGV-X macOS integration + accessibility)
+- **macOS native integration**: screen menu bar (`apple.laf.useScreenMenuBar`) so IGV-X uses the system menu bar; app name property `IGV-X`; green-button fullscreen enabled (`FullScreenUtilities` via reflection); macOS application handlers installed when supported: Preferences (Cmd+, opens Preferences), Quit (Cmd+Q now routes through the unsaved-session confirmation instead of quitting blindly), and Open File (Finder drag-and-drop onto the Dock icon loads files/sessions through the same smart routing as File > Open). All guarded by `Desktop.isSupported` so non-macOS/headless platforms are unaffected.
+- **Keyboard accelerators** on the File and View menus using the platform menu shortcut (Cmd on macOS, Ctrl elsewhere): Open (Cmd+O), Load from URL (Cmd+U), New Session (Cmd+N), Save Session (Cmd+S), Preferences (Cmd+,), Exit (Cmd+Q). `MenuAction` gained an accelerator-aware constructor; headless-safe (falls back to Ctrl in unit tests).
+- **Accessibility (VoiceOver/assistive tech)**: icon-only toolbar buttons in the command bar now carry explicit accessible names + descriptions (Home, Back, Forward, Refresh, ROI, Fit-to-window, Details, Ruler, Go, Search field) so screen readers describe them.
+- Regression tests: `MenuActionTest` (accelerator key code + platform shortcut mask set; no accelerator when disabled).
+
 ### Added (IGV-X diagnostics + error recovery)
 - **Diagnose Track/Session (Tools menu + track popup)**: new `org.broad.igv.diagnostic` package — `TrackDiagnostics` inspects a track and reports resource presence (local/remote, empty file), index existence (BAM/CRAM `.bai`/`.crai`, Tribble `.idx`/`.tbi`, self-indexed bigWig/bigBed/TDF), the chromosome-resolution comparison (exact / case-insensitive / alias-aware vs the current genome, with unmatched names listed), and JVM heap pressure. `DiagnoseDialog` shows a copyable report; safe to run on any track — never renames user files, never mutates state.
 - Public chromosome-name accessors for diagnostics: `TribbleFeatureSource.getChromosomeNames()` and `TDFDataSource.getChromosomeNames()` (read-only, sorted/immutable snapshot).

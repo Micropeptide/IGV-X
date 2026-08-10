@@ -309,6 +309,14 @@ public class Main {
 
     private static void initializeLookAndFeel() {
 
+        // IGV-X: macOS native integration -- put the menu bar in the system
+        // menu bar (standard macOS behavior) and honor the system dark-mode
+        // preference where the L&F supports it. Must be set before the L&F loads.
+        if (Globals.IS_MAC) {
+            System.setProperty("apple.laf.useScreenMenuBar", "true");
+            System.setProperty("apple.awt.application.name", "IGV-X");
+        }
+
         try {
             String lnf = UIManager.getSystemLookAndFeelClassName();
             UIManager.setLookAndFeel(lnf);

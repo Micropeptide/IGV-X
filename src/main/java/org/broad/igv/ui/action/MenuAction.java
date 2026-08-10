@@ -35,7 +35,10 @@
 package org.broad.igv.ui.action;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * @author eflakes
@@ -51,6 +54,37 @@ public class MenuAction extends AbstractAction {
         super(name, icon);
         if(mnemonic >= 0) {
             putValue(MNEMONIC_KEY, mnemonic);
+        }
+    }
+
+    /**
+     * Creates a new instance of MenuAction with a keyboard accelerator.
+     * The accelerator uses the platform menu shortcut key (Cmd on macOS,
+     * Ctrl on Windows/Linux), so the same key code works across platforms.
+     *
+     * @param acceleratorKey KeyEvent.VK_* code, or -1 for none
+     */
+    public MenuAction(String name, Icon icon, int mnemonic, int acceleratorKey) {
+        super(name, icon);
+        if (mnemonic >= 0) {
+            putValue(MNEMONIC_KEY, mnemonic);
+        }
+        if (acceleratorKey >= 0) {
+            int shortcutMask = getMenuShortcutMask();
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(acceleratorKey, shortcutMask));
+        }
+    }
+
+    /**
+     * Platform menu shortcut mask (Cmd on macOS, Ctrl elsewhere).  Falls back
+     * to Ctrl in headless environments (e.g. unit tests) where Toolkit is
+     * not available.
+     */
+    private static int getMenuShortcutMask() {
+        try {
+            return Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        } catch (Exception e) {
+            return InputEvent.CTRL_DOWN_MASK;
         }
     }
 
