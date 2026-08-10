@@ -68,11 +68,39 @@ def verify_bam_header(path):
         out = subprocess.run(["samtools", "view", "-H", path],
                              capture_output=True, text=True, timeout=120)
     except FileNotFoundError:
-        return "SKIP (samtools not installed)", False
+        return verify_bam_header_python(path)
     if out.returncode != 0:
         return f"ERROR {out.stderr.strip()[:200]}", False
     sq = [l for l in out.stdout.splitlines() if l.startswith("@SQ")]
     return f"@SQ count={len(sq)}", len(sq) > 0
+
+
+def verify_bam_header_python(path):
+    """Fallback when samtools is absent: BAM is BGZF, so the text header
+    (SAM header, ends with the \n@CO line before binary alignments) can be
+    read from the first gzip members. Returns (@SQ count, ok)."""
+    try:
+        with gzip.open(path, "rb") as fh:
+            head = b""
+            # Read a few KB; the SAM text header is small.
+            head = fh.read(4096)
+            # Find where binary data starts: header is followed by NUL; the
+            # l_text bytes are the length of the SAM header. For our check,
+            # simply look for @SQ lines in the first 4KB.
+        text = head.decode("utf-8", errors="replace")
+        sq = [l for l in text.splitlines() if l.startswith("@SQ")]
+        if sq:
+            return f"@SQ count={len(sq)} (python bgzf)", True
+        # If @SQ not in first 4KB (long header), scan more members.
+        with gzip.open(path, "rb") as fh:
+            head2 = fh.read(200000)
+        text2 = head2.decode("utf-8", errors="replace")
+        sq2 = [l for l in text2.splitlines() if l.startswith("@SQ")]
+        if sq2:
+            return f"@SQ count={len(sq2)} (python bgzf scan)", True
+        return "no @SQ found in header scan", False
+    except Exception as e:  # noqa: BLE001
+        return f"ERROR {e}", False
 
 
 def verify_gzip(path):
