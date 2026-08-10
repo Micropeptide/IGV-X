@@ -6,8 +6,32 @@ notarization where possible, DMG/ZIP, versioning, checksums.
 ## 1. Current state (2026-08-10)
 
 The build is verified for development (`./gradlew compileJava test` with
-vendored JDK 21 + Gradle 8.10.1). App-bundle packaging is the next
-milestone; this document is the release contract.
+vendored JDK 21 + Gradle 8.10.1). **The app bundle is built and installed**:
+`/Applications/IGV-X.app` (v2.19.5-igvx, bundled JDK 21, ad-hoc codesigned,
+launch verified). This document is the release contract for moving from
+ad-hoc local install to signed/notarized distribution.
+
+## 1.1 Quick local build + install (what was done)
+
+```bash
+# Build the mac app bundle WITH bundled JDK (separate from createMacAppDist!):
+./gradlew createMacAppWithJavaDistZip \
+  -PjdkBundleMac=$PWD/tools/jdk-21.0.12+8 -Pversion=2.19.5-igvx
+# → build/distributions/IGV_MacApp_2.19.5-igvx_WithJava.zip
+# Unzip to a staging dir; rename the .app to IGV-X.app; ad-hoc codesign:
+codesign --force --deep -s - IGV-X.app
+# Install:
+cp -R IGV-X.app /Applications/
+# Verify launch (bundled JDK, independent of CWD):
+open /Applications/IGV-X.app
+```
+
+Known quirk: the upstream compiled `Contents/MacOS/IGV` launcher is
+CWD-sensitive (exits 255 if run from outside `Contents/`). IGV-X replaces it
+with a robust shell launcher (`scripts/mac.app/Contents/MacOS/IGV`, commit
+689c2dbe1) that resolves paths from its own location, uses the bundled JDK,
+and honors `~/igvx/java_arguments`.
+
 
 ## 2. App identity (must not collide with stock IGV)
 
