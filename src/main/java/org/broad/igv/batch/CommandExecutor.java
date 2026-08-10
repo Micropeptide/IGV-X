@@ -813,6 +813,8 @@ public class CommandExecutor {
 
 
             if (fileLocators.size() > 0) {
+                // IGV-X: record batch-command opened files in recent history.
+                igv.addToRecentUrls(fileLocators);
                 igv.loadTracks(fileLocators);
             }
 

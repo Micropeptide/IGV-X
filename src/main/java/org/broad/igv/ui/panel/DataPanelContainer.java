@@ -36,6 +36,7 @@ import org.broad.igv.ui.FontManager;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.MessageCollection;
 import org.broad.igv.ui.util.MessageUtils;
+import org.broad.igv.ui.util.RecentFiles;
 import org.broad.igv.util.LongRunningTask;
 import org.broad.igv.util.ResourceLocator;
 
@@ -222,6 +223,8 @@ public class DataPanelContainer extends TrackPanelComponent implements Paintable
                         for (ResourceLocator locator : locators) {
                             try {
                                 IGV.getInstance().load(locator, panel);
+                                // IGV-X: record drag-and-drop opened files in recent history.
+                                RecentFiles.record(IGV.getInstance(), locator);
                             } catch (DataLoadException de) {
                                 messages.append(de.getMessage());
                             }

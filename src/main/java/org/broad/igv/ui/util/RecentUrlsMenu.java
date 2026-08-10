@@ -51,10 +51,9 @@ public class RecentUrlsMenu extends JMenu {
         MenuAction menuItemAction = new MenuAction(resourceLocator.getPath()) {
             @Override
             public void actionPerformed(ActionEvent event) {
-                IGV igv = IGV.getInstance();
-                List<ResourceLocator> resource = List.of(resourceLocator);
-                igv.loadTracks(resource);
-                igv.addToRecentUrls(resource);
+                // IGV-X: route session files to loadSession, everything else to
+                // loadTracks, so a session can never be parsed as data.
+                RecentFiles.open(IGV.getInstance(), resourceLocator);
             }
         };
 

@@ -15,5 +15,28 @@ preferences, caches, and logs).
   (e.g. `Chr1..ChrM`) don't exactly match the genome's canonical names (e.g. `NC_003070.9`/`chr1` on tair10).
   IGV-X resolves the mapping centrally and never crashes on a missing mapping.
 
-_(More features documented as they land — large sessions, relative paths, bookmarks, trackpad navigation,
-multi-track selection, export, diagnostics, packaging.)_
+### Recent-files history + welcome panel
+- A **Welcome panel** shows at startup with your recently opened files and sessions — double-click any entry
+  to reopen it, or use the buttons to open a file/session or clear history.
+- History is now recorded on **every** open path: File menu, Load from URL, drag-and-drop, command line, and
+  batch commands (stock IGV only recorded menu-based loads). Entries persist in `~/igvx/prefs.properties`.
+- The **Recent Files** menu routes session files to the session loader (never parses a session as data), and
+  stale local entries (deleted files) are pruned from the lists automatically.
+
+### Large-session performance
+- Sessions with hundreds of tracks (e.g. ~900 methylation bigWigs) load on a **bounded thread pool** instead
+  of one thread per file, the status bar updates **asynchronously** with honest `Loading session: N/total`
+  progress (no more 1800 blocked UI round-trips), and mouse-hit regions are computed only for **visible**
+  tracks. Track-load pool scales with your CPU; bigWig R-tree caches are thread-safe.
+
+### Navigation & region selection
+- **Trackpad navigation**: two-finger horizontal swipe pans the view (configurable sensitivity;
+  `IGVX.SWIPE_PAN_ENABLED` / `IGVX.SWIPE_PAN_SENSITIVITY`). Vertical scroll is untouched.
+- **ROI drag-select**: press-drag-release draws a live region selection; the classic two-click method still works.
+
+### macOS app
+- Ships as **IGV-X.app** with its own `~/igvx` preferences/caches (never touches an existing IGV install),
+  your custom icon in Finder and the Dock, and a robust CWD-independent launcher.
+- Full public test corpus (bigWig/bigBed/BAM/CRAM/BED/VCF/GFF/GTF/FASTA/sessions) verified for compatibility testing.
+
+_(More features documented as they land — relative paths, bookmarks, multi-track selection, export, diagnostics.)_

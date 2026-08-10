@@ -1254,6 +1254,9 @@ public class IGV implements IGVEventObserver {
                 }
             }
             panel.addTracks(tracks);
+
+            // IGV-X: once real data is on screen, drop the welcome panel.
+            contentPane.showWelcomePanel(false);
         }
     }
 
@@ -2091,6 +2094,8 @@ public class IGV implements IGVEventObserver {
 
                             locators.add(rl);
                         }
+                        // IGV-X: record command-line opened files in recent history.
+                        addToRecentUrls(locators);
                         loadTracks(locators);
                     } else if (loadAutosave) {
                         boolean success = false;
@@ -2122,6 +2127,13 @@ public class IGV implements IGVEventObserver {
                     }
 
                 });
+
+                // IGV-X: when nothing was explicitly loaded, show the welcome
+                // panel (recent files / sessions) instead of an empty viewer.
+                if (!runningBatch && igvArgs.getSessionFile() == null
+                        && igvArgs.getDataFileStrings() == null && !loadAutosave) {
+                    UIUtilities.invokeOnEventThread(() -> contentPane.showWelcomePanel(true));
+                }
 
                 session.recordHistory();
             }

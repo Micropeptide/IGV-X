@@ -29,6 +29,7 @@ import org.broad.igv.logging.*;
 import org.broad.igv.ui.commandbar.IGVCommandBar;
 import org.broad.igv.ui.panel.MainPanel;
 import org.broad.igv.ui.panel.TrackPanel;
+import org.broad.igv.ui.panel.WelcomePanel;
 import org.broad.igv.ui.util.ApplicationStatusBar;
 
 import javax.swing.*;
@@ -47,6 +48,10 @@ public class IGVContentPane extends JPanel {
     private JPanel commandBarPanel;
     private IGVCommandBar igvCommandBar;
     private MainPanel mainPanel;
+    private WelcomePanel welcomePanel;
+    private JPanel centerPanel;
+    private CardLayout centerCardLayout;
+    private boolean welcomeVisible = false;
     private ApplicationStatusBar statusBar;
 
     private IGV igv;
@@ -78,7 +83,15 @@ public class IGVContentPane extends JPanel {
 
 
         mainPanel = new MainPanel(igv);
-        add(mainPanel, BorderLayout.CENTER);
+        welcomePanel = new WelcomePanel(igv);
+
+        // Center region hosts the data panel and, at startup when nothing is
+        // loaded yet, the IGV-X welcome panel (recent files / sessions).
+        centerCardLayout = new CardLayout();
+        centerPanel = new JPanel(centerCardLayout);
+        centerPanel.add(mainPanel, "main");
+        centerPanel.add(welcomePanel, "welcome");
+        add(centerPanel, BorderLayout.CENTER);
 
         statusBar = new ApplicationStatusBar();
         statusBar.setDebugGraphicsOptions(javax.swing.DebugGraphics.NONE_OPTION);
@@ -100,6 +113,26 @@ public class IGVContentPane extends JPanel {
 
     public MainPanel getMainPanel() {
         return mainPanel;
+    }
+
+    public WelcomePanel getWelcomePanel() {
+        return welcomePanel;
+    }
+
+    /**
+     * Show or hide the IGV-X welcome (recent files / sessions) panel.  When
+     * shown, the recent lists are refreshed from persisted history.
+     */
+    public void showWelcomePanel(boolean show) {
+        if (show) {
+            welcomePanel.refresh();
+        }
+        welcomeVisible = show;
+        centerCardLayout.show(centerPanel, show ? "welcome" : "main");
+    }
+
+    public boolean isWelcomeVisible() {
+        return welcomeVisible;
     }
 
     public IGVCommandBar getCommandBar() {
