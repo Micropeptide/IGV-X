@@ -311,6 +311,11 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText(UIConstants.LOAD_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: batch import from a folder (+ subfolders) with type filter
+        menuAction = new LoadTracksFromFolderAction("Open Folder of Tracks...", 0, igv);
+        menuAction.setToolTipText("Scan a folder (and subfolders) for track files and load selected ones");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         menuAction = new LoadFromURLMenuAction(LoadFromURLMenuAction.LOAD_FROM_URL, KeyEvent.VK_U, igv);
         menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         menuAction.setToolTipText(UIConstants.LOAD_TRACKS_TOOLTIP);
