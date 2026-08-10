@@ -283,8 +283,8 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
         menuItems.add(new JSeparator());
 
-        // Load menu items
-        menuAction = new LoadFilesMenuAction("Load from File...", KeyEvent.VK_L, igv);
+        // Load menu items — IGV-X: unified smart Open (files + sessions auto-routed)
+        menuAction = new SmartOpenMenuAction("Open...", KeyEvent.VK_O, igv);
         menuAction.setToolTipText(UIConstants.LOAD_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
@@ -343,10 +343,6 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         // Session menu items
         menuAction = new NewSessionMenuAction("New Session...", KeyEvent.VK_N, igv);
         menuAction.setToolTipText(UIConstants.NEW_SESSION_TOOLTIP);
-        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
-
-        menuAction = new OpenSessionMenuAction("Open Session...", KeyEvent.VK_O, igv);
-        menuAction.setToolTipText(OPEN_SESSION_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
         menuAction = new SaveSessionMenuAction("Save Session...", KeyEvent.VK_V, igv);
@@ -1160,6 +1156,13 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
     }
 
     final public void doExitApplication() {
+
+        if (igv.isSessionModified()) {
+            boolean proceed = MessageUtils.confirm("The current session has unsaved changes. Exit anyway?");
+            if (!proceed) {
+                return;
+            }
+        }
 
         try {
             igv.saveStateForExit();

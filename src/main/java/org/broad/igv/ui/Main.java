@@ -108,7 +108,13 @@ public class Main {
             initApplication(igvArgs);
 
             JFrame frame = new JFrame();
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+            frame.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    org.broad.igv.ui.IGV.getInstance().getMenuBar().doExitApplication();
+                }
+            });
             ImageIcon icon = new ImageIcon(Main.class.getResource("mainframeicon.png"));
             if (icon != null) frame.setIconImage(icon.getImage());
             open(frame, igvArgs);

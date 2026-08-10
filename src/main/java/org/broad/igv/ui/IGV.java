@@ -110,6 +110,10 @@ public class IGV implements IGVEventObserver {
     private JRootPane rootPane;
     private IGVContentPane contentPane;
     private IGVMenuBar menuBar;
+
+    public IGVMenuBar getMenuBar() {
+        return menuBar;
+    }
     private StatusWindow statusWindow;
 
     // Glass panes
@@ -127,6 +131,21 @@ public class IGV implements IGVEventObserver {
      * from a "session" file.
      */
     private Session session;
+
+    /**
+     * IGV-X: true when the current session has been modified (tracks loaded or
+     * removed) since it was last loaded, saved, or reset.  Used to prompt the
+     * user before closing/exiting with unsaved changes.
+     */
+    private volatile boolean sessionModified = false;
+
+    public boolean isSessionModified() {
+        return sessionModified;
+    }
+
+    public void setSessionModified(boolean sessionModified) {
+        this.sessionModified = sessionModified;
+    }
 
     /**
      * Timer for triggering periodic autosave of current session
@@ -374,6 +393,7 @@ public class IGV implements IGVEventObserver {
         Future toRet = null;
         if (locators != null && !locators.isEmpty()) {
 
+            setSessionModified(true);
             contentPane.getStatusBar().setMessage("Loading ...");
 
             NamedRunnable runnable = new NamedRunnable() {
@@ -928,6 +948,7 @@ public class IGV implements IGVEventObserver {
      * @param sessionPath
      */
     public void resetSession(String sessionPath) {
+        setSessionModified(false);
 
         session.reset(sessionPath);
         AttributeManager.getInstance().clearAllAttributes();
@@ -944,8 +965,7 @@ public class IGV implements IGVEventObserver {
      * Creates a new IGV session
      */
     public void newSession() {
-        resetSession(null);
-        Genome currentGenome = GenomeManager.getInstance().getCurrentGenome();
+        resetSession(null);        Genome currentGenome = GenomeManager.getInstance().getCurrentGenome();
         if (currentGenome != null) {
             GenomeManager.getInstance().restoreGenomeTracks(currentGenome);
         }
@@ -1042,6 +1062,7 @@ public class IGV implements IGVEventObserver {
         session.clearDividerLocations();
 
         revalidateTrackPanels();
+        setSessionModified(false);
         return true;
     }
 
@@ -1054,6 +1075,7 @@ public class IGV implements IGVEventObserver {
      */
     public void saveSession(File targetFile) throws IOException {
         (new SessionWriter()).saveSession(session, targetFile);
+        setSessionModified(false);
 
         String sessionPath = targetFile.getAbsolutePath();
         session.setPath(sessionPath);
