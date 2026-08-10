@@ -39,6 +39,9 @@ IGV.track.height	Default feature track height (pixels)	integer	15
 TRACK_ATTRIBUTE_NAME_KEY	Sample attribute key for track names	string	null
 EXPAND_FEATURE_TRACKS	Expand feature tracks	boolean	FALSE
 NORMALIZE_COVERAGE	Normalize coverage data (.tdf files only)	boolean	FALSE
+##Default Quantitative Range (IGV-X)
+IGVX.QUANT.RANGE.MIN	Default min for new quantitative tracks (blank = autoscale)	float	null
+IGVX.QUANT.RANGE.MAX	Default max for new quantitative tracks (blank = autoscale)	float	null
 ##Heatmaps
 NO_DATA.COLOR	 No data	color	216,216,216
 NO_CALL.COLOR	 No call	color	150,150,150

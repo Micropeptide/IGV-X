@@ -2329,6 +2329,8 @@ public class IGV implements IGVEventObserver {
     public void repaintNamePanels() {
         for (TrackPanel tp : getTrackPanels()) {
             tp.getScrollPane().getNamePanel().repaint();
+            // IGV-X: selection state is now also rendered in the data panel
+            tp.getScrollPane().getDataPanel().repaint();
         }
     }
 

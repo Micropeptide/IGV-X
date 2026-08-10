@@ -35,6 +35,9 @@ import org.broad.igv.feature.LocusScore;
 import org.broad.igv.logging.LogManager;
 import org.broad.igv.logging.Logger;
 import org.broad.igv.renderer.DataRange;
+import org.broad.igv.prefs.Constants;
+import org.broad.igv.prefs.IGVPreferences;
+import org.broad.igv.prefs.PreferencesManager;
 import org.broad.igv.util.ResourceLocator;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -86,15 +89,46 @@ public class DataSourceTrack extends DataTrack {
         float max = (float) dataSource.getDataMax();
         float baseline = 0;
 
-        // If the range is all + numbers set the min to zero
-        if (min > 0) {
-            min = 0;
-        }
-        for (LocusScore score : scores) {
-            max = Math.max(max, score.getScore());
+        // IGV-X: honor a configurable default quantitative range when both ends are set
+        Float[] defRange = getDefaultQuantRange();
+        if (defRange != null) {
+            min = defRange[0];
+            max = defRange[1];
+        } else {
+            // If the range is all + numbers set the min to zero
+            if (min > 0) {
+                min = 0;
+            }
+            for (LocusScore score : scores) {
+                max = Math.max(max, score.getScore());
+            }
         }
 
         setDataRange(new DataRange(min, baseline, max));
+    }
+
+    /**
+     * IGV-X: read the configurable default quantitative range from preferences.
+     * Returns null when the preference is unset/blank or invalid (min >= max),
+     * in which case normal data-driven autoscaling is used.
+     */
+    static Float[] getDefaultQuantRange() {
+        IGVPreferences prefs = PreferencesManager.getPreferences();
+        String minStr = prefs.get(Constants.DEFAULT_QUANT_RANGE_MIN);
+        String maxStr = prefs.get(Constants.DEFAULT_QUANT_RANGE_MAX);
+        if (minStr == null || maxStr == null || minStr.trim().isEmpty() || maxStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            float min = Float.parseFloat(minStr.trim());
+            float max = Float.parseFloat(maxStr.trim());
+            if (Float.isNaN(min) || Float.isNaN(max) || min >= max) {
+                return null;
+            }
+            return new Float[]{min, max};
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public LoadedDataInterval<List<LocusScore>> getSummaryScores(String chr, int startLocation, int endLocation, int zoom) {

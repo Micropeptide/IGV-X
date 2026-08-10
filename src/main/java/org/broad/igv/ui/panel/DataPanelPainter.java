@@ -41,6 +41,7 @@ import org.broad.igv.track.*;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.UIConstants;
 import org.broad.igv.ui.util.SnapshotOptions;
+import org.broad.igv.ui.util.SnapshotUtilities;
 
 import java.awt.*;
 import java.util.*;
@@ -194,6 +195,17 @@ public class DataPanelPainter {
 
                         if (track.isVisible()) {
                             Rectangle rect = new Rectangle(trackX, trackY, dRect.width, trackHeight);
+                            // IGV-X: visual selection feedback in the data panel.
+                            // Drawn only on screen (never during image export), and never in
+                            // publication mode. Uses a translucent blue border + fill so the
+                            // track content stays readable while the selection is obvious.
+                            if (track.isSelected() && !SnapshotUtilities.snapshotInProgress && !SnapshotOptions.isPublicationMode()) {
+                                Graphics2D selG = dContext.getGraphic2DForColor(new Color(66, 133, 244, 28));
+                                selG.fillRect(rect.x, rect.y, rect.width, rect.height);
+                                selG = dContext.getGraphic2DForColor(new Color(66, 133, 244, 160));
+                                selG.setStroke(new BasicStroke(2.0f));
+                                selG.drawRect(rect.x, rect.y, rect.width, rect.height);
+                            }
                             draw(track, rect, dContext);
                             trackY += trackHeight;
                         }

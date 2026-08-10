@@ -67,6 +67,10 @@ final public class Constants {
     public static final String SEARCH_ZOOM = "SEARCH_ZOOM";
     public static final String FLANKING_REGION = "FLANKING_REGION";
 
+    // IGV-X: configurable default quantitative track range (blank = autoscale as before)
+    public static final String DEFAULT_QUANT_RANGE_MIN = "IGVX.QUANT.RANGE.MIN";
+    public static final String DEFAULT_QUANT_RANGE_MAX = "IGVX.QUANT.RANGE.MAX";
+
     public static final String NEXT_FIT_TO_WINDOW = "NEXT_FIT_TO_WINDOW";
 
     public static final String NEXT_FLANKING_REGION = "NEXT_FLANKING_REGION";
