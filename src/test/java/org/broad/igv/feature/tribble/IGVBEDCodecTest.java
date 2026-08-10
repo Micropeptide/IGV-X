@@ -27,6 +27,7 @@ package org.broad.igv.feature.tribble;
 
 import org.broad.igv.AbstractHeadlessTest;
 import org.broad.igv.feature.IGVFeature;
+import org.broad.igv.util.TestUtils;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
@@ -44,6 +45,20 @@ public class IGVBEDCodecTest extends AbstractHeadlessTest {
         IGVBEDCodec codec = new IGVBEDCodec();
         IGVFeature feature =  codec.decode(line);
         assertEquals("strong GGGCGGGTGGGGCGGG", feature.getName());
+    }
+
+    /**
+     * IGV-X regression: a BED file whose chromosome is Chr1 (capital C, as produced by
+     * some pipelines) must canonicalize onto the genome's chr1 (lowercase) when the
+     * codec is constructed with that genome.  Guards the genome-layer canonicalization
+     * path used by all tribble codecs (BED/VCF/GFF/PSL/...).
+     */
+    @Test
+    public void testChrNameCapitalizationCanonicalization() throws Exception {
+        String line = "Chr1\t1051161\t1051177\tcapital_chr_test\t0.81";
+        IGVBEDCodec codec = new IGVBEDCodec(TestUtils.mockUCSCGenome());
+        IGVFeature feature = codec.decode(line);
+        assertEquals("capital Chr1 must canonicalize to lowercase chr1", "chr1", feature.getChr());
     }
 
     @Test

@@ -43,6 +43,31 @@ import static org.junit.Assert.*;
 public class VCFWrapperCodecTest extends AbstractHeadlessTest {
 
     /**
+     * IGV-X regression: a VCF whose CHROM column uses Chr1 (capital C, as produced
+     * by some pipelines) must canonicalize onto the genome's chr1 (lowercase) when
+     * read through TribbleFeatureSource with that genome.  Guards the genome-layer
+     * canonicalization path for VCF (VariantCodec / VCFVariant).
+     */
+    @Test
+    public void testChrNameCapitalizationCanonicalization() throws Exception {
+        String filePath = TestUtils.DATA_DIR + "vcf/chr1_cap.vcf";
+        TestUtils.createIndex(filePath);
+
+        genome = TestUtils.mockUCSCGenome();
+        TribbleFeatureSource src = TribbleFeatureSource.getFeatureSource(new ResourceLocator(filePath), genome);
+
+        // Query with the genome's canonical lowercase name; the file stores Chr1 (capital).
+        Iterator<VCFVariant> iter = src.getFeatures("chr1", 0, 5000);
+        int count = 0;
+        while (iter.hasNext()) {
+            VCFVariant v = iter.next();
+            assertEquals("capital Chr1 VCF records must canonicalize to chr1", "chr1", v.getChr());
+            count++;
+        }
+        assertEquals("expected all 3 records from the capital-Chr1 VCF", 3, count);
+    }
+
+    /**
      * It is apparently a matter of some contention whether having a missing
      * field within a comma-separated list of fields should be legal VCF.
      * We've decided that IGV will accept these files, but since we use the picard VCF codec (and they don't want to)

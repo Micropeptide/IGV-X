@@ -53,4 +53,13 @@ usable zoom reduction levels; sparse fixtures make `zoomLevelForScale` return nu
 Used by `AlignmentDataManagerTest.testBamChrNameCapitalizationResolution` (end-to-end query via
 ChromAliasManager) and `testBamChrNameCanonicalizationOnRead` (reader-level canonicalization).
 
+## Committed fixture manifest (test/data/vcf)
+
+| Fixture | Chromosome names | Purpose |
+|---|---|---|
+| `chr1_cap.vcf` | `Chr1` (capital C) | VCF case-mismatch: 3 records on Chr1; must canonicalize to `chr1` when read with a genome |
+
+Used by `VCFWrapperCodecTest.testChrNameCapitalizationCanonicalization`. BED coverage lives in
+`IGVBEDCodecTest.testChrNameCapitalizationCanonicalization` (inline, no fixture).
+
 Regeneration scripts: `/tmp/make_fixtures.py` (kept out of git; regenerable).
