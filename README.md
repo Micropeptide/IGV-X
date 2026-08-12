@@ -1,5 +1,10 @@
 # IGV-X
 
+> **A customized version of IGV built specifically for Runtian Wu's research** —
+> Arabidopsis epigenetics, whole-genome bisulfite sequencing (WGBS) methylation
+> analysis, and large multi-track sessions. Designed around those workflows
+> while remaining fully compatible with standard IGV.
+
 **IGV-X** is a robust, modern fork of the [Integrative Genomics Viewer](https://github.com/igvteam/IGV)
 — a desktop genome visualization tool for Mac, Windows, and Linux — customized for
 large epigenomics sessions.

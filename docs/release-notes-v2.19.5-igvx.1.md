@@ -1,5 +1,11 @@
 # IGV-X v2.19.5-igvx.1 — Release Notes
 
+> **IGV-X is a customized version of IGV built specifically for Runtian Wu's
+> research** — Arabidopsis epigenetics, whole-genome bisulfite sequencing
+> (WGBS) methylation analysis, and large multi-track sessions. It is designed
+> around those workflows while remaining fully compatible with standard IGV
+> sessions and genomics file formats.
+
 **IGV-X** is a robust, modern fork of the [Integrative Genomics Viewer (IGV)](https://github.com/igvteam/IGV)
 (upstream fork base: `2.19.X` stable, commit `e2bcf4200`). It is fully compatible
 with standard IGV sessions and genomics file formats, and adds a hardened
