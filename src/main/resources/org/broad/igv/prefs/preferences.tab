@@ -42,6 +42,9 @@ NORMALIZE_COVERAGE	Normalize coverage data (.tdf files only)	boolean	FALSE
 ##Default Quantitative Range (IGV-X)
 IGVX.QUANT.RANGE.MIN	Default min for new quantitative tracks (blank = autoscale)	float	null
 IGVX.QUANT.RANGE.MAX	Default max for new quantitative tracks (blank = autoscale)	float	null
+##Updates (IGV-X)
+IGVX.UPDATE.CHECK.ON_STARTUP	Check for updates on startup (IGV-X)	boolean	FALSE
+IGVX.UPDATE.URL	Update feed URL (GitHub releases, IGV-X)	string	https://api.github.com/repos/Micropeptide/IGV-X/releases/latest
 ##Heatmaps
 NO_DATA.COLOR	 No data	color	216,216,216
 NO_CALL.COLOR	 No call	color	150,150,150
