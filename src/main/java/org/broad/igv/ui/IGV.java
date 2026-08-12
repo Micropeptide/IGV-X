@@ -2095,6 +2095,10 @@ public class IGV implements IGVEventObserver {
             // privately hosted genomes.
             startCommandsServer(igvArgs, preferences);
 
+            // IGV-X: install bundled genomes (e.g. Arabidopsis TAIR10) shipped with the app.
+            // No-op when already installed or in headless/testing mode.
+            org.broad.igv.feature.genome.BundledGenomes.installBundledGenomes();
+
             UIUtilities.invokeAndWaitOnEventThread(() -> {
                 mainFrame.setIconImage(getIconImage());
                 if (Globals.IS_MAC) {

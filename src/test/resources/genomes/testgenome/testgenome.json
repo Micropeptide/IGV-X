@@ -1,0 +1,15 @@
+{
+  "id": "testgenome",
+  "name": "Test Genome (synthetic)",
+  "fastaURL": "testgenome.fa",
+  "indexURL": "testgenome.fa.fai",
+  "aliasURL": "testgenome.chrAlias",
+  "tracks": [
+    {
+      "name": "Test genes",
+      "url": "testgenome_genes.gtf.gz",
+      "format": "gtf",
+      "visible": true
+    }
+  ]
+}

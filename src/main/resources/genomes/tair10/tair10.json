@@ -1,0 +1,15 @@
+{
+  "id": "tair10",
+  "name": "Arabidopsis thaliana (TAIR10)",
+  "fastaURL": "TAIR10_chr.fa",
+  "indexURL": "TAIR10_chr.fa.fai",
+  "aliasURL": "tair10.chrAlias",
+  "tracks": [
+    {
+      "name": "TAIR10 genes (araport11 + TEs)",
+      "url": "tair10_genes.gtf.gz",
+      "format": "gtf",
+      "visible": true
+    }
+  ]
+}
