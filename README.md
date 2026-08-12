@@ -1,3 +1,36 @@
+# IGV-X
+
+**IGV-X** is a robust, modern fork of the [Integrative Genomics Viewer](https://github.com/igvteam/IGV)
+— a desktop genome visualization tool for Mac, Windows, and Linux — customized for
+large epigenomics sessions.
+
+- **Chromosome-name resolution that never crashes**: fixes the stock IGV 2.19.5
+  bigWig NullPointerException on TAIR10 WGBS sessions (hundreds of methylation
+  bigWigs with `Chr1..ChrM` vs RefSeq aliases); case-insensitive, alias-aware
+  resolution across bigWig/bigBed/BAM/BED/VCF using genome alias info — never
+  global lowercase conversion, never renaming user files.
+- **Large-session performance** for ~900 bigWig sessions: bounded loading
+  threads, async loads, honest progress, viewport culling, caching.
+- **Relative session paths** by default, optional `.igvx.json` companion,
+  bookmarks & highlights persisted in the session, cancelable session loading.
+- **High-quality PNG/SVG/PDF export**, multi-track selection, configurable
+  default quantitative ranges, trackpad navigation.
+- **Organize tracks by genotype** → CG/CHG/CHH with editable remembered rules.
+- **Diagnostics & error recovery**: Diagnose Track/Session, exception
+  dedup/rate-limiting, batch command listener (port 60151).
+- **In-app updates** from this repository's GitHub releases.
+- Modern macOS app (native menu bar, fullscreen, Retina, accessibility),
+  bundled JDK, own bundle ID and prefs (`~/igvx`) — safe to run alongside
+  stock IGV.
+
+**Downloads & releases:** see [Releases](https://github.com/Micropeptide/IGV-X/releases).
+**Full diff vs stock IGV:** [`docs/changes-vs-igv.md`](docs/changes-vs-igv.md) ·
+[`docs/whats-different.md`](docs/whats-different.md) · [`docs/fork-diff.md`](docs/fork-diff.md)
+
+The rest of this README is the upstream IGV documentation (fork base: `2.19.X`).
+
+---
+
 # igv
 
 ![Build Status](https://github.com/igvteam/igv/actions/workflows/gradle.yml/badge.svg)
