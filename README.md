@@ -1,6 +1,7 @@
 # IGV-X
 
-> **A customized version of IGV built specifically for Runtian Wu's research** —
+> **A customized version of IGV built specifically for
+> [micropeptide](https://github.com/micropeptide)'s research** —
 > Arabidopsis epigenetics, whole-genome bisulfite sequencing (WGBS) methylation
 > analysis, and large multi-track sessions. Designed around those workflows
 > while remaining fully compatible with standard IGV.

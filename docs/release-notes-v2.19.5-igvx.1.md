@@ -1,8 +1,9 @@
 # IGV-X v2.19.5-igvx.1 — Release Notes
 
-> **IGV-X is a customized version of IGV built specifically for Runtian Wu's
-> research** — Arabidopsis epigenetics, whole-genome bisulfite sequencing
-> (WGBS) methylation analysis, and large multi-track sessions. It is designed
+> **IGV-X is a customized version of IGV built specifically for
+> [micropeptide](https://github.com/micropeptide)'s research** — Arabidopsis
+> epigenetics, whole-genome bisulfite sequencing (WGBS) methylation analysis,
+> and large multi-track sessions. It is designed
 > around those workflows while remaining fully compatible with standard IGV
 > sessions and genomics file formats.
 
