@@ -44,6 +44,7 @@ IGVX.QUANT.RANGE.MIN	Default min for new quantitative tracks (blank = autoscale)
 IGVX.QUANT.RANGE.MAX	Default max for new quantitative tracks (blank = autoscale)	float	null
 ##Updates (IGV-X)
 IGVX.UPDATE.CHECK.ON_STARTUP	Check for updates on startup (IGV-X)	boolean	FALSE
+IGVX.UPDATE.INTERVAL.HOURS	Automatic update check interval in hours (0 = never, IGV-X)	string	0
 IGVX.UPDATE.URL	Update feed URL (GitHub releases, IGV-X)	string	https://api.github.com/repos/Micropeptide/IGV-X/releases/latest
 ##Heatmaps
 NO_DATA.COLOR	 No data	color	216,216,216

@@ -2112,8 +2112,11 @@ public class IGV implements IGVEventObserver {
             // Load the initial genome.
             final boolean runningBatch = igvArgs.getBatchFile() != null;
 
-            // IGV-X: optional background update check (never in batch mode, never blocks startup)
+            // IGV-X: first-run update-setup prompt + periodic auto-checks + startup check
+            // (never in batch mode, never blocks startup)
             if (!runningBatch && !Globals.isHeadless()) {
+                org.broad.igv.ui.update.UpdateManager.promptFirstRunIfNeeded(mainFrame);
+                org.broad.igv.ui.update.UpdateManager.startPeriodicChecks(mainFrame);
                 org.broad.igv.ui.update.UpdateManager.checkOnStartupIfEnabled(mainFrame);
             }
 

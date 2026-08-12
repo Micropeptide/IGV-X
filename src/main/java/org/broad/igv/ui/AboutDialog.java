@@ -61,15 +61,22 @@ public class AboutDialog extends javax.swing.JDialog {
 
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
         okButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setBackground(java.awt.Color.white);
 
         jLabel1.setFont(new java.awt.Font("Lucida Grande", 0, 14));
-        jLabel1.setText("<html><b>Integrative Genomics Viewer<");
+        jLabel1.setText("<html><b>Integrative Genomics Viewer <font color='#1a7f37'>IGV-X</font>");
 
         jLabel2.setText(Globals.versionString());
+
+        jLabel3.setFont(new java.awt.Font("Lucida Grande", 0, 11));
+        jLabel3.setForeground(new java.awt.Color(90, 90, 90));
+        jLabel3.setText("<html><div style='width:300px'>A customized version of IGV built specifically for<br>" +
+                "micropeptide's research (Arabidopsis epigenetics / WGBS).<br>" +
+                "Updates: Help &gt; Check for Updates</div>");
 
         okButton.setText("OK");
         okButton.addActionListener(new java.awt.event.ActionListener() {
@@ -86,7 +93,8 @@ public class AboutDialog extends javax.swing.JDialog {
                                 .add(28, 28, 28)
                                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                                 .add(jLabel1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 239, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                                .add(jLabel2)))
+                                .add(jLabel2)
+                                .add(jLabel3)))
                         .add(layout.createSequentialGroup()
                         .add(91, 91, 91)
                         .add(okButton))
@@ -98,7 +106,9 @@ public class AboutDialog extends javax.swing.JDialog {
                         .add(jLabel1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 25, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .add(18, 18, 18)
                         .add(jLabel2)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 43, Short.MAX_VALUE)
+                        .add(12, 12, 12)
+                        .add(jLabel3)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 31, Short.MAX_VALUE)
                         .add(okButton)
                         .add(29, 29, 29))
         );
@@ -132,6 +142,7 @@ public class AboutDialog extends javax.swing.JDialog {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JButton okButton;
     // End of variables declaration//GEN-END:variables
 }
