@@ -10,6 +10,24 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 ## [Unreleased] — 2.19.X fork base
 
 ### Added
+- **Undo/Redo + Track History + save-without-prompt** (commit pending):
+  - Edit menu with **Undo (Cmd/Ctrl+Z)** and **Redo (Cmd/Ctrl+Shift+Z)** across
+    track-list mutations: add/remove tracks, drag reorder, overlay merge/unmerge,
+    rename, recolor, height change, sort, group-by. Labels show the operation
+    being undone/redone.
+  - **Track History...** dialog (Edit menu) lists the last 100 operations and
+    lets you jump to any point in history.
+  - Track-history log persisted in the `.igvx.json` companion metadata, so
+    history survives save/reload.
+  - **Save-without-prompt**: File > Save Session now writes directly to the
+    session's path instead of re-asking for a location (Save As... for a new
+    path).
+  - New `TrackHistoryManager` + `UndoMenuAction`/`RedoMenuAction`;
+    regression tests `TrackHistoryManagerTest` (7), `TrackHistoryIntegrationTest`,
+    extended `SessionMetadataTest` (history round-trip), new `MockTrack` test
+    helper.
+
+### Added
 - **macOS Finder association for IGV session files**: IGV-X now registers
   itself with LaunchServices so IGV session files (.igvx, .session,
   .session.txt, .idxsession, .idxsession.txt) open in IGV-X by default when

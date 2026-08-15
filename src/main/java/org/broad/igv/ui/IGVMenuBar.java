@@ -75,6 +75,7 @@ import java.awt.*;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.*;
 import java.net.URI;
@@ -121,6 +122,10 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
     private JMenuItem reloadSessionItem;
     private JMenuItem cancelSessionLoadItem;
     private JMenuItem recentFilesMenu;
+
+    // IGV-X: undo/redo actions (Edit menu)
+    private UndoMenuAction undoAction;
+    private RedoMenuAction redoAction;
 
 
     static IGVMenuBar createInstance(IGV igv) {
@@ -182,6 +187,7 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         List<AbstractButton> menus = new ArrayList<AbstractButton>();
 
         menus.add(createFileMenu());
+        menus.add(createEditMenu());
         menus.add(createGenomesMenu());
         menus.add(createViewMenu());
         menus.add(createTracksMenu());
@@ -224,6 +230,89 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
     public void updateAWSMenu() {
         UIUtilities.invokeOnEventThread(() -> AWSMenu.setVisible(AmazonUtils.isAwsProviderPresent()));
+    }
+
+    /**
+     * IGV-X: Edit menu — undo/redo of track-list mutations (Cmd/Ctrl+Z,
+     * Cmd/Ctrl+Shift+Z) plus the session operation history.
+     */
+    JMenu createEditMenu() {
+        JMenu editMenu = new JMenu("Edit");
+        editMenu.setMnemonic(KeyEvent.VK_E);
+
+        List<JComponent> menuItems = new ArrayList<>();
+
+        UndoMenuAction undoAction = new UndoMenuAction("Undo", KeyEvent.VK_Z, igv);
+        undoAction.putValue(Action.ACCELERATOR_KEY,
+                KeyStroke.getKeyStroke(KeyEvent.VK_Z, getMenuShortcutMask()));
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(undoAction));
+        this.undoAction = undoAction;
+
+        RedoMenuAction redoAction = new RedoMenuAction("Redo", KeyEvent.VK_Y, igv);
+        redoAction.putValue(Action.ACCELERATOR_KEY,
+                KeyStroke.getKeyStroke(KeyEvent.VK_Z, getMenuShortcutMask() | InputEvent.SHIFT_DOWN_MASK));
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(redoAction));
+        this.redoAction = redoAction;
+
+        menuItems.add(new JSeparator());
+        MenuAction historyAction = new MenuAction("Track History...", null, KeyEvent.VK_H) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showTrackHistoryDialog();
+            }
+        };
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(historyAction));
+
+        return MenuAndToolbarUtils.createMenu(menuItems, new MenuAction("Edit"));
+    }
+
+    /**
+     * IGV-X: headless-safe menu shortcut mask (Cmd on macOS, Ctrl elsewhere).
+     */
+    private static int getMenuShortcutMask() {
+        try {
+            return Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        } catch (Exception e) {
+            return InputEvent.CTRL_DOWN_MASK;
+        }
+    }
+
+    /**
+     * IGV-X: refresh undo/redo menu enabled state + labels after mutations.
+     */
+    void updateUndoRedoActions() {
+        if (undoAction != null) {
+            undoAction.updateEnabledState();
+        }
+        if (redoAction != null) {
+            redoAction.updateEnabledState();
+        }
+    }
+
+    /**
+     * IGV-X: show the session track operation history in a dialog.
+     */
+    private void showTrackHistoryDialog() {
+        TrackHistoryManager history = igv.getTrackHistory();
+        List<String> log = history.getHistoryLog();
+        java.util.Collections.reverse(log);
+        JTextArea textArea = new JTextArea();
+        textArea.setEditable(false);
+        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+        if (log.isEmpty()) {
+            textArea.setText("No track operations recorded in this session.");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            int n = 1;
+            for (String s : log) {
+                sb.append(String.format("%3d. %s%n", n++, s));
+            }
+            textArea.setText(sb.toString());
+        }
+        JScrollPane scroll = new JScrollPane(textArea);
+        scroll.setPreferredSize(new java.awt.Dimension(480, 360));
+        JOptionPane.showMessageDialog(igv.getMainFrame(), scroll,
+                "Track History (this session)", JOptionPane.PLAIN_MESSAGE);
     }
 
     /**

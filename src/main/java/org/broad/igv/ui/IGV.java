@@ -138,11 +138,24 @@ public class IGV implements IGVEventObserver {
     private Session session;
 
     /**
+     * IGV-X: undo/redo history for track-list mutations.  Session-scoped;
+     * reset by {@link #resetSession(String)}.
+     */
+    private final TrackHistoryManager trackHistory = new TrackHistoryManager();
+
+    /**
      * IGV-X: true when the current session has been modified (tracks loaded or
      * removed) since it was last loaded, saved, or reset.  Used to prompt the
      * user before closing/exiting with unsaved changes.
      */
     private volatile boolean sessionModified = false;
+
+    /**
+     * IGV-X: access the undo/redo history for track-list mutations.
+     */
+    public TrackHistoryManager getTrackHistory() {
+        return trackHistory;
+    }
 
     public boolean isSessionModified() {
         return sessionModified;
@@ -150,6 +163,11 @@ public class IGV implements IGVEventObserver {
 
     public void setSessionModified(boolean sessionModified) {
         this.sessionModified = sessionModified;
+        // IGV-X: keep the Edit menu's Undo/Redo enabled state in sync with the
+        // history manager after any recorded mutation.
+        if (sessionModified && menuBar != null) {
+            menuBar.updateUndoRedoActions();
+        }
     }
 
     /**
@@ -1072,6 +1090,7 @@ public class IGV implements IGVEventObserver {
      */
     public void resetSession(String sessionPath) {
         setSessionModified(false);
+        trackHistory.reset();
 
         session.reset(sessionPath);
         AttributeManager.getInstance().clearAllAttributes();
@@ -1387,9 +1406,11 @@ public class IGV implements IGVEventObserver {
      */
 
     public void addTracks(List<Track> tracks, PanelName panelName) {
-        TrackPanel panel = getTrackPanel(panelName.getName());
-        panel.addTracks(tracks);
-        repaint();
+        getTrackHistory().record("Add " + tracks.size() + " track(s)", () -> {
+            TrackPanel panel = getTrackPanel(panelName.getName());
+            panel.addTracks(tracks);
+            repaint();
+        });
     }
 
     /**
@@ -1401,24 +1422,26 @@ public class IGV implements IGVEventObserver {
     public void addTracks(List<Track> tracks) {
 
         if (tracks.size() > 0) {
-            String path = tracks.get(0).getResourceLocator().getPath();//  locator.getPath();
-            Track representativeTrack = tracks.get(0);
+            getTrackHistory().record("Add " + tracks.size() + " track(s)", () -> {
+                String path = tracks.get(0).getResourceLocator().getPath();//  locator.getPath();
+                Track representativeTrack = tracks.get(0);
 
-            // Get an appropriate panel.  If its a VCF file create a new panel if the number of genotypes
-            // is greater than 10
-            TrackPanel panel = getPanelFor(representativeTrack);
-            if (path.endsWith(".vcf") || path.endsWith(".vcf.gz") ||
-                    path.endsWith(".vcf4") || path.endsWith(".vcf4.gz")) {
-                Track t = tracks.get(0);
-                if (t instanceof VariantTrack && ((VariantTrack) t).getAllSamples().size() > 10) {
-                    String newPanelName = "Panel" + System.currentTimeMillis();
-                    panel = addDataPanel(newPanelName).getTrackPanel();
+                // Get an appropriate panel.  If its a VCF file create a new panel if the number of genotypes
+                // is greater than 10
+                final TrackPanel[] panelHolder = {getPanelFor(representativeTrack)};
+                if (path.endsWith(".vcf") || path.endsWith(".vcf.gz") ||
+                        path.endsWith(".vcf4") || path.endsWith(".vcf4.gz")) {
+                    Track t = tracks.get(0);
+                    if (t instanceof VariantTrack && ((VariantTrack) t).getAllSamples().size() > 10) {
+                        String newPanelName = "Panel" + System.currentTimeMillis();
+                        panelHolder[0] = addDataPanel(newPanelName).getTrackPanel();
+                    }
                 }
-            }
-            panel.addTracks(tracks);
+                panelHolder[0].addTracks(tracks);
 
-            // IGV-X: once real data is on screen, drop the welcome panel.
-            contentPane.showWelcomePanel(false);
+                // IGV-X: once real data is on screen, drop the welcome panel.
+                contentPane.showWelcomePanel(false);
+            });
         }
     }
 
@@ -1843,22 +1866,24 @@ public class IGV implements IGVEventObserver {
      */
     public void deleteTracks(Collection<? extends Track> tracksToRemove) {
 
-        // Make copy of list as we will be modifying the original in the loop
-        List<TrackPanel> panels = getTrackPanels();
-        for (TrackPanel trackPanel : panels) {
-            trackPanel.removeTracks(tracksToRemove);
-            if (!trackPanel.hasTracks()) {
-                removeDataPanel(trackPanel.getName());
+        getTrackHistory().record("Remove " + tracksToRemove.size() + " track(s)", () -> {
+            // Make copy of list as we will be modifying the original in the loop
+            List<TrackPanel> panels = getTrackPanels();
+            for (TrackPanel trackPanel : panels) {
+                trackPanel.removeTracks(tracksToRemove);
+                if (!trackPanel.hasTracks()) {
+                    removeDataPanel(trackPanel.getName());
+                }
             }
-        }
 
-        for (Track t : tracksToRemove) {
-            if (t instanceof IGVEventObserver) {
-                IGVEventBus.getInstance().unsubscribe((IGVEventObserver) t);
+            for (Track t : tracksToRemove) {
+                if (t instanceof IGVEventObserver) {
+                    IGVEventBus.getInstance().unsubscribe((IGVEventObserver) t);
+                }
+                t.unload();
             }
-            t.unload();
-        }
-        revalidateTrackPanels();
+            revalidateTrackPanels();
+        });
     }
 
     /**
@@ -1905,9 +1930,11 @@ public class IGV implements IGVEventObserver {
     public void sortAllTracksByAttributes(final String attributeNames[], final boolean[] ascending) {
         assert attributeNames.length == ascending.length;
 
-        for (TrackPanel trackPanel : getTrackPanels()) {
-            trackPanel.sortTracksByAttributes(attributeNames, ascending);
-        }
+        getTrackHistory().record("Sort tracks", () -> {
+            for (TrackPanel trackPanel : getTrackPanels()) {
+                trackPanel.sortTracksByAttributes(attributeNames, ascending);
+            }
+        });
     }
 
 
@@ -2017,14 +2044,16 @@ public class IGV implements IGVEventObserver {
 
 
     public void setGroupByAttribute(String attributeName) {
-        session.setGroupByAttribute(attributeName);
-        resetGroups();
-        // Some tracks need to respond to changes in grouping, fire notification event
-        IGVEventBus.getInstance().post(new TrackGroupEvent());
+        getTrackHistory().record("Group tracks by " + (attributeName == null ? "none" : attributeName), () -> {
+            session.setGroupByAttribute(attributeName);
+            resetGroups();
+            // Some tracks need to respond to changes in grouping, fire notification event
+            IGVEventBus.getInstance().post(new TrackGroupEvent());
+        });
     }
 
 
-    private void resetGroups() {
+    void resetGroups() {
         log.debug("Resetting Groups");
         for (TrackPanel trackPanel : getTrackPanels()) {
             trackPanel.groupTracksByAttribute(session.getGroupByAttribute());

@@ -85,6 +85,18 @@ public class SessionMetadata {
     public static void write(File sessionFile, String genomeId, String locus,
                              int trackCount, List<String> resourcePaths,
                              boolean relativePaths) {
+        write(sessionFile, genomeId, locus, trackCount, resourcePaths, relativePaths, null);
+    }
+
+    /**
+     * Write the companion metadata next to the session file, including the
+     * IGV-X track-operation history log (JSON array of strings) when present.
+     * Never throws: a failed companion write must not prevent the session
+     * itself from saving.
+     */
+    public static void write(File sessionFile, String genomeId, String locus,
+                             int trackCount, List<String> resourcePaths,
+                             boolean relativePaths, JsonArray history) {
         if (sessionFile == null) {
             return;
         }
@@ -107,6 +119,9 @@ public class SessionMetadata {
                     arr.add(p);
                 }
                 root.add("resources", arr);
+            }
+            if (history != null && history.size() > 0) {
+                root.add("history", history);
             }
             File companion = getCompanionPath(sessionFile);
             Path tmp = companion.toPath().resolveSibling(companion.getName() + ".tmp");

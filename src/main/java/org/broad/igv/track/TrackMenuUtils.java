@@ -1017,8 +1017,11 @@ public class TrackMenuUtils {
             return;
         }
 
-        t.setName(newName);
-        IGV.getInstance().repaintNamePanels();
+        // IGV-X: record rename in the undo history.
+        IGV.getInstance().getTrackHistory().record("Rename track", () -> {
+            t.setName(newName);
+            IGV.getInstance().repaintNamePanels();
+        });
     }
 
     public static void changeTrackHeight(final Collection<Track> selectedTracks) {
@@ -1033,10 +1036,14 @@ public class TrackMenuUtils {
         }
 
         value = Math.max(0, value);
-        for (Track track : selectedTracks) {
-            track.setHeight(value, true);
-        }
-        IGV.getInstance().repaint(selectedTracks);
+        final int newHeight = value;
+        // IGV-X: record height change in the undo history.
+        IGV.getInstance().getTrackHistory().record("Change track height", () -> {
+            for (Track track : selectedTracks) {
+                track.setHeight(newHeight, true);
+            }
+            IGV.getInstance().repaint(selectedTracks);
+        });
     }
 
     public static void changeFeatureVisibilityWindow(final Collection<Track> selectedTracks) {
@@ -1150,11 +1157,14 @@ public class TrackMenuUtils {
             return;
         }
 
-        for (Track track : selectedTracks) {
-            //We preserve the alpha value. This is motivated by MergedTracks
-            track.setColor(ColorUtilities.modifyAlpha(color, currentSelection.getAlpha()));
-        }
-        IGV.getInstance().repaint(selectedTracks);
+        // IGV-X: record color change in the undo history.
+        IGV.getInstance().getTrackHistory().record("Change track color", () -> {
+            for (Track track : selectedTracks) {
+                //We preserve the alpha value. This is motivated by MergedTracks
+                track.setColor(ColorUtilities.modifyAlpha(color, currentSelection.getAlpha()));
+            }
+            IGV.getInstance().repaint(selectedTracks);
+        });
     }
 
     public static void changeAltTrackColor(final Collection<Track> selectedTracks) {

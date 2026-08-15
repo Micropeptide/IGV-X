@@ -122,7 +122,8 @@ public class SessionWriter {
                     session.getLocusString(),
                     getResourceLocatorSet().size(),
                     resourcePaths,
-                    isUseRelative(outputFile));
+                    isUseRelative(outputFile),
+                    IGV.hasInstance() ? IGV.getInstance().getTrackHistory().toJson() : null);
         } catch (Exception e) {
             log.warn("IGV-X: companion metadata write failed", e);
         }

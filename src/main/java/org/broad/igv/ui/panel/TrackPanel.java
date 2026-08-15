@@ -447,11 +447,14 @@ public class TrackPanel extends IGVPanel {
             return;
         }
 
-        for (TrackGroup tg : trackGroups) {
-            if (tg.moveSelectedTracksTo(selectedTracks, targetTrack, before)) {
-                return;
+        // IGV-X: record reorder in the undo history (drag-and-drop reorder path).
+        IGV.getInstance().getTrackHistory().record("Reorder tracks", () -> {
+            for (TrackGroup tg : trackGroups) {
+                if (tg.moveSelectedTracksTo(selectedTracks, targetTrack, before)) {
+                    return;
+                }
             }
-        }
+        });
     }
 
 

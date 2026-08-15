@@ -92,26 +92,30 @@ public class OverlayTracksMenuAction extends MenuAction {
     }
 
     public static void merge(List<DataTrack> dataTrackList, String name) {
-        MergedTracks mergedTracks = new MergedTracks(UUID.randomUUID().toString(), name, dataTrackList);
-        Track firstTrack = dataTrackList.iterator().next();
-        TrackPanel panel = TrackPanel.getParentPanel(firstTrack);
-        panel.addTrack(mergedTracks);
-        panel.moveSelectedTracksTo(Arrays.asList(mergedTracks), firstTrack, false);
-        panel.removeTracks(dataTrackList);
+        IGV.getInstance().getTrackHistory().record("Overlay " + dataTrackList.size() + " track(s)", () -> {
+            MergedTracks mergedTracks = new MergedTracks(UUID.randomUUID().toString(), name, dataTrackList);
+            Track firstTrack = dataTrackList.iterator().next();
+            TrackPanel panel = TrackPanel.getParentPanel(firstTrack);
+            panel.addTrack(mergedTracks);
+            panel.moveSelectedTracksTo(Arrays.asList(mergedTracks), firstTrack, false);
+            panel.removeTracks(dataTrackList);
+        });
     }
 
     public static void unmerge(Collection<Track> tracks) {
-        for (Track t : tracks) {
-            if (t instanceof MergedTracks) {
-                TrackPanel panel = TrackPanel.getParentPanel(t);
-                MergedTracks mergedTracks = (MergedTracks) t;
-                mergedTracks.setTrackAlphas(1.0);
-                panel.addTracks(mergedTracks.getMemberTracks());
-                panel.moveSelectedTracksTo(mergedTracks.getMemberTracks(), mergedTracks, true);
-                IGV.getInstance().deleteTracks(Arrays.asList(mergedTracks));
+        IGV.getInstance().getTrackHistory().record("Separate overlaid tracks", () -> {
+            for (Track t : tracks) {
+                if (t instanceof MergedTracks) {
+                    TrackPanel panel = TrackPanel.getParentPanel(t);
+                    MergedTracks mergedTracks = (MergedTracks) t;
+                    mergedTracks.setTrackAlphas(1.0);
+                    panel.addTracks(mergedTracks.getMemberTracks());
+                    panel.moveSelectedTracksTo(mergedTracks.getMemberTracks(), mergedTracks, true);
+                    IGV.getInstance().deleteTracks(Arrays.asList(mergedTracks));
+                }
             }
-        }
-        IGV.getInstance().repaint();
+            IGV.getInstance().repaint();
+        });
     }
 
 }

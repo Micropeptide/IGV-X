@@ -75,36 +75,42 @@ public class SaveSessionMenuAction extends MenuAction {
     @Override
     public void actionPerformed(ActionEvent e) {
 
-
         File sessionFile = null;
 
         String currentSessionFilePath = igv.getSession().getPath();
 
-        // Get the parent dir of the session file so we can check if it's in the autosave directory
+        // IGV-X: save-without-prompt. When this session already has a real path
+        // (and is not the autosave file), write straight to it instead of
+        // showing the file chooser every time. The chooser is only shown for
+        // new sessions (Save As) or sessions that live in the autosave directory.
         File parentDir = currentSessionFilePath == null ? null : new File(new File(currentSessionFilePath).getParent());
+        boolean hasRealPath = currentSessionFilePath != null
+                && !parentDir.equals(DirectoryManager.getAutosaveDirectory());
+        if (hasRealPath) {
+            sessionFile = new File(currentSessionFilePath);
+        } else {
+            // Get the parent dir of the session file so we can check if it's in the autosave directory
 
-        // If the filepath is null or the file is in the autosave dir, use the default session file name
-        String initFile = currentSessionFilePath == null  || parentDir.equals(DirectoryManager.getAutosaveDirectory()) ?
-                UIConstants.DEFAULT_SESSION_FILE : currentSessionFilePath;
-        sessionFile = FileDialogUtils.chooseFile("Save Session",
-                PreferencesManager.getPreferences().getLastTrackDirectory(),
-                new File(initFile),
-                FileDialogUtils.SAVE);
-
+            // If the filepath is null or the file is in the autosave dir, use the default session file name
+            String initFile = currentSessionFilePath == null ?
+                    UIConstants.DEFAULT_SESSION_FILE : currentSessionFilePath;
+            sessionFile = FileDialogUtils.chooseFile("Save Session",
+                    PreferencesManager.getPreferences().getLastTrackDirectory(),
+                    new File(initFile),
+                    FileDialogUtils.SAVE);
+        }
 
         if (sessionFile == null) {
             igv.resetStatusMessage();
             return;
         }
 
-
         String filePath = sessionFile.getAbsolutePath();
-        if (!filePath.toLowerCase().endsWith(".xml")) {
+        if (!hasRealPath && !filePath.toLowerCase().endsWith(".xml")) {
             sessionFile = new File(filePath + ".xml");
         }
 
         igv.setStatusBarMessage("Saving session to " + sessionFile.getAbsolutePath());
-
 
         final File sf = sessionFile;
         WaitCursorManager.CursorToken token = WaitCursorManager.showWaitCursor();
@@ -117,8 +123,6 @@ public class SaveSessionMenuAction extends MenuAction {
         } finally {
             WaitCursorManager.removeWaitCursor(token);
             igv.resetStatusMessage();
-
-
         }
     }
 

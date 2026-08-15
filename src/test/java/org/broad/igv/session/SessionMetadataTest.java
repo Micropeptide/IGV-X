@@ -57,6 +57,42 @@ public class SessionMetadataTest extends AbstractHeadlessTest {
     }
 
     @Test
+    public void testWriteWithHistoryRoundTrip() throws Exception {
+        File dir = Files.createTempDirectory("igvx-session-meta").toFile();
+        dir.deleteOnExit();
+        File sessionFile = new File(dir, "hist.session.xml");
+
+        JsonArray history = new JsonArray();
+        history.add("Add 2 track(s)");
+        history.add("Rename track");
+        history.add("Remove 1 track(s)");
+
+        SessionMetadata.write(sessionFile, "tair10", null, 3,
+                Arrays.asList("data/a.bigWig"), false, history);
+
+        JsonObject meta = SessionMetadata.read(sessionFile.getAbsolutePath());
+        assertNotNull(meta);
+        JsonArray readHistory = meta.getAsJsonArray("history");
+        assertNotNull(readHistory);
+        assertEquals(3, readHistory.size());
+        assertEquals("Rename track", readHistory.get(1).getAsString());
+    }
+
+    @Test
+    public void testWriteWithoutHistoryOmitsField() throws Exception {
+        File dir = Files.createTempDirectory("igvx-session-meta").toFile();
+        dir.deleteOnExit();
+        File sessionFile = new File(dir, "nohist.session.xml");
+
+        SessionMetadata.write(sessionFile, "tair10", null, 1,
+                Arrays.asList("data/a.bigWig"), false, null);
+
+        JsonObject meta = SessionMetadata.read(sessionFile.getAbsolutePath());
+        assertNotNull(meta);
+        assertFalse(meta.has("history"));
+    }
+
+    @Test
     public void testMissingCompanionReturnsNull() {
         assertNull(SessionMetadata.read("/tmp/definitely-missing-session.xml"));
     }

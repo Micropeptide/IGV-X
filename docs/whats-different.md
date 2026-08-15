@@ -24,6 +24,12 @@ preferences, caches, and logs).
 
 ## Sessions & files
 
+- **Undo/Redo + Track History**: Edit > Undo (Cmd/Ctrl+Z) / Redo (Cmd/Ctrl+Shift+Z)
+  across track mutations (add/remove, reorder, overlay merge, rename, recolor,
+  height, sort, group), plus a Track History dialog; history persists in the
+  `.igvx.json` companion.
+- **Save without re-prompting**: File > Save Session writes straight back to the
+  session's own path; Save As... only when you want a new location.
 - **Relative session paths** default on (paths stored relative to the session file — sessions stay portable
   when moved with their data).
 - **`.igvx.json` companion metadata** written next to saved sessions; optional — sessions load fine without it.
