@@ -10,6 +10,17 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
 ## [Unreleased] — 2.19.X fork base
 
 ### Added
+- **macOS Finder association for IGV session files**: IGV-X now registers
+  itself with LaunchServices so IGV session files (.igvx, .session,
+  .session.txt, .idxsession, .idxsession.txt) open in IGV-X by default when
+  double-clicked, and standard IGV sessions (.xml) appear in the Finder
+  right-click "Open With" menu. Help > Open IGV Session Files in IGV-X...
+  explains the one-time Finder step to make .xml sessions open by default.
+  Session-file detection centralized in `SessionMetadata.isSessionFile` and
+  shared by the open-file handler, drag-and-drop, recent-files, and the
+  command line (closes the gap where .igvx/.idxsession files were treated as
+  tracks). New regression tests: `InfoPlistTemplateTest` (3), extended
+  `RecentFilesTest`, `SessionMetadataTest`.
 
 ### Added (IGV-X organize tracks by genotype)
 - **Tracks > Organize Tracks by Genotype...** (commit `6c1d56b2b`): group

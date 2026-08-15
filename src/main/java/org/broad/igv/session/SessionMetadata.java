@@ -37,6 +37,28 @@ public class SessionMetadata {
             ".xml", ".igvx", ".session.txt", ".session", ".idxsession.txt", ".idxsession"
     };
 
+    /**
+     * IGV-X: canonical "is this path a session file?" test, shared by the
+     * open-file routing (Finder open handler, drag-and-drop, recent-files) and
+     * by {@link SessionReader}.  Case-insensitive; covers stock IGV sessions
+     * (.xml, .php, .php3) and IGV-X native sessions (.igvx, .session,
+     * .session.txt, .idxsession, .idxsession.txt).
+     */
+    public static boolean isSessionFile(String path) {
+        if (path == null) {
+            return false;
+        }
+        String p = path.trim().toLowerCase();
+        return p.endsWith(".xml")
+                || p.endsWith(".php")
+                || p.endsWith(".php3")
+                || p.endsWith(".igvx")
+                || p.endsWith(".session")
+                || p.endsWith(".session.txt")
+                || p.endsWith(".idxsession")
+                || p.endsWith(".idxsession.txt");
+    }
+
     private SessionMetadata() {
     }
 

@@ -30,6 +30,12 @@ preferences, caches, and logs).
 - **Unified smart Open**: one File > Open dialog routes files vs sessions automatically.
 - **Unsaved-session close confirmation**: closing with unsaved changes asks first (all exit paths).
 - **Recent-files history + welcome panel**: every open path records history; double-click to reopen.
+- **macOS Finder association (session files)**: IGV-X registers with LaunchServices so IGV session files
+  (`.igvx`, `.session`, `.session.txt`, `.idxsession`, `.idxsession.txt`) open in IGV-X when double-clicked,
+  and standard `.xml` sessions appear in the Finder right-click "Open With" menu (choose IGV-X once, then
+  "Change All…" to make `.xml` sessions open in IGV-X by default). Help > Open IGV Session Files in IGV-X…
+  shows the one-time steps. IGV-X keeps its own bundle id (`org.igvx.IGVX`) and never conflicts with a
+  stock IGV install.
 - **Persistent bookmarks + region highlights**: saved with the session, per-region colors. Saving a bookmark no longer blocks the UI — it uses a lightweight repaint, and a 60-second watchdog releases the wait cursor if any track load genuinely hangs (e.g. OneDrive cloud placeholders), so the cursor can never spin forever.
 
 ## Navigation & region selection

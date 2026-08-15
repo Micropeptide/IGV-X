@@ -58,20 +58,13 @@ public class RecentFiles {
     }
 
     /**
-     * True for anything IGV can load as a session.  Mirrors
-     * {@link SessionReader#isSessionFile(String)} and adds the
-     * {@code .session.txt} variant recognized by IGV.loadSessionFromStream.
+     * True for anything IGV can load as a session.  Delegates to the canonical
+     * {@link org.broad.igv.session.SessionMetadata#isSessionFile(String)} test,
+     * which covers stock IGV sessions (.xml, .php, .php3) and IGV-X native
+     * sessions (.igvx, .session, .session.txt, .idxsession, .idxsession.txt).
      */
     public static boolean isSessionFile(String path) {
-        if (path == null) {
-            return false;
-        }
-        String p = path.trim().toLowerCase();
-        return p.endsWith(".xml")
-                || p.endsWith(".php")
-                || p.endsWith(".php3")
-                || p.endsWith(".session")
-                || p.endsWith(".session.txt");
+        return org.broad.igv.session.SessionMetadata.isSessionFile(path);
     }
 
     /**

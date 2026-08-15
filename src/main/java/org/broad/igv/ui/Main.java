@@ -35,6 +35,7 @@ import org.broad.igv.oauth.OAuthUtils;
 import org.broad.igv.prefs.Constants;
 import org.broad.igv.prefs.IGVPreferences;
 import org.broad.igv.prefs.PreferencesManager;
+import org.broad.igv.session.SessionReader;
 import org.broad.igv.ui.util.UIUtilities;
 import org.broad.igv.util.FileUtils;
 import org.broad.igv.util.HttpUtils;
@@ -543,8 +544,7 @@ public class Main {
 
             if (firstArg != null) {
                 log.info("Loading: " + firstArg);
-                if (firstArg.endsWith(".xml") || firstArg.endsWith(".php") || firstArg.endsWith(".php3")
-                        || firstArg.endsWith(".session")) {
+                if (SessionReader.isSessionFile(firstArg)) {
                     sessionFile = firstArg;
                 } else {
                     String[] paths = firstArg.split(",");

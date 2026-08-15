@@ -160,6 +160,9 @@ if [[ "$VERIFY" == "1" ]]; then
   /usr/libexec/PlistBuddy -c 'Print CFBundleName' "$APP/Contents/Info.plist" | grep -q 'IGV-X' || { echo "FAIL: bundle name" >&2; exit 1; }
   test -x "$APP/Contents/MacOS/IGV" || { echo "FAIL: launcher not executable" >&2; exit 1; }
   grep -q 'IGV-X launcher' "$APP/Contents/MacOS/IGV" || { echo "FAIL: wrong launcher" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$APP/Contents/Info.plist" | grep -q 'org.igvx.session' || { echo "FAIL: session document type" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:1:LSItemContentTypes:0' "$APP/Contents/Info.plist" | grep -q 'public.xml' || { echo "FAIL: xml Open With type" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeIdentifier' "$APP/Contents/Info.plist" | grep -q 'org.igvx.session' || { echo "FAIL: exported UTI" >&2; exit 1; }
   hdiutil verify "$DMG" >/dev/null
   echo "Verification OK."
 fi

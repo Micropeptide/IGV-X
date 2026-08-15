@@ -71,4 +71,26 @@ public class SessionMetadataTest extends AbstractHeadlessTest {
                 "{\"formatVersion\": 99, \"app\": \"IGV-X\"}".getBytes());
         assertNull(SessionMetadata.read(sessionFile.getAbsolutePath()));
     }
+
+    @Test
+    public void testIsSessionFileCoversAllSessionExtensions() {
+        // Stock IGV sessions
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.xml"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.php"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.php3"));
+        // IGV-X native sessions
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.igvx"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.session"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.session.txt"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.idxsession"));
+        assertTrue(SessionMetadata.isSessionFile("/data/foo.idxsession.txt"));
+        // Case-insensitive
+        assertTrue(SessionMetadata.isSessionFile("/data/FOO.XML"));
+        assertTrue(SessionMetadata.isSessionFile("/data/FOO.IGVX"));
+        // Non-sessions and degenerate inputs
+        assertFalse(SessionMetadata.isSessionFile("/data/track.bigWig"));
+        assertFalse(SessionMetadata.isSessionFile("/data/reads.bam"));
+        assertFalse(SessionMetadata.isSessionFile(null));
+        assertFalse(SessionMetadata.isSessionFile(""));
+    }
 }

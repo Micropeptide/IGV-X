@@ -943,6 +943,34 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText("Send a feature request to the IGV-X developer (micropeptide@icloud.com)");
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: open IGV session files in IGV-X from Finder
+        menuAction =
+                new MenuAction("Open IGV Session Files in IGV-X...") {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        JOptionPane.showMessageDialog(igv.getMainFrame(),
+                                "IGV-X now registers IGV session files with macOS.\n" +
+                                        "\n" +
+                                        "• IGV-X session files (.igvx, .session, .session.txt, .idxsession) " +
+                                        "open in IGV-X automatically when double-clicked.\n" +
+                                        "• Standard IGV sessions (.xml) can be opened from the Finder " +
+                                        "right-click menu: Open With > IGV-X.\n" +
+                                        "\n" +
+                                        "To make ALL .xml session files open in IGV-X by default:\n" +
+                                        "  1. In Finder, right-click any IGV session (.xml) file.\n" +
+                                        "  2. Choose Get Info.\n" +
+                                        "  3. Under 'Open with', choose IGV-X.\n" +
+                                        "  4. Click 'Change All...' and confirm.\n" +
+                                        "\n" +
+                                        "You only need to do this once; afterwards double-clicking " +
+                                        "a session opens it in IGV-X.",
+                                "Open IGV Session Files in IGV-X", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                };
+        menuAction.setToolTipText("How to open IGV session files by double-clicking them in the Finder");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         MenuAction helpMenuAction = new MenuAction("Help");
 
 

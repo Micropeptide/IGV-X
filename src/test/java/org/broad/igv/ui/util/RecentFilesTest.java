@@ -53,8 +53,13 @@ public class RecentFilesTest {
         assertTrue(RecentFiles.isSessionFile("/data/foo.session.txt"));
         assertTrue(RecentFiles.isSessionFile("/data/foo.php"));
         assertTrue(RecentFiles.isSessionFile("/data/foo.php3"));
+        // IGV-X native session extensions (must route to loadSession, not loadTracks)
+        assertTrue(RecentFiles.isSessionFile("/data/foo.igvx"));
+        assertTrue(RecentFiles.isSessionFile("/data/foo.idxsession"));
+        assertTrue(RecentFiles.isSessionFile("/data/foo.idxsession.txt"));
         // Case-insensitive (IGV-X convention)
         assertTrue(RecentFiles.isSessionFile("/data/FOO.XML"));
+        assertTrue(RecentFiles.isSessionFile("/data/FOO.IGVX"));
     }
 
     @Test
