@@ -88,6 +88,13 @@ public class Main {
 
         Thread.setDefaultUncaughtExceptionHandler(new DefaultExceptionHandler());
 
+        // NOTE: the macOS open-file handler is installed inside the EDT runnable
+        // below (after AWT is initialized), NOT here.  java.awt.Desktop handlers
+        // must be installed once the AWT event loop exists, or the queued
+        // cold-launch Finder open-file event is never delivered to them.  The
+        // handler buffers events until IGV is ready; DesktopIntegration.setIgvReady
+        // drains them after IGV.createInstance.
+
         final Main.IGVArgs igvArgs = new Main.IGVArgs(args);
 
         // Do this early
@@ -101,6 +108,12 @@ public class Main {
         htsjdk.tribble.util.ParsingUtils.setURLHelperFactory(IGVUrlHelperFactory.getInstance());
 
         Runnable runnable = () -> {
+            // IGV-X: install the macOS open-file handler on the EDT (AWT is
+            // initialized by now).  Idempotent -- if the very-early main() call
+            // already succeeded, this is a no-op; if it failed because AWT was
+            // not ready, this retries with a working Desktop API.
+            DesktopIntegration.installEarlyOpenFileHandler();
+
             if (Globals.IS_WINDOWS && System.getProperty("os.name").contains("10")) {
                 UIManager.put("FileChooser.useSystemExtensionHiding", false);
             }
@@ -301,6 +314,10 @@ public class Main {
 
         // Start IGV's UI itself (frame) and other components
        IGV igv = IGV.createInstance(frame, igvArgs);
+
+        // IGV-X: mark the IGV instance ready so any open-file events buffered
+        // during startup (cold-launch Finder double-click / Open With) drain now.
+        DesktopIntegration.setIgvReady(igv);
 
         igv.startUp(igvArgs);
 

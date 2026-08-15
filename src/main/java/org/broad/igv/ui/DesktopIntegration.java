@@ -26,6 +26,9 @@ package org.broad.igv.ui;
 
 import java.awt.Desktop;
 import org.broad.igv.Globals;
+import org.broad.igv.logging.LogManager;
+import org.broad.igv.logging.Logger;
+import org.broad.igv.ui.action.SmartOpenMenuAction;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
@@ -34,6 +37,8 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.JOptionPane;
@@ -66,6 +71,96 @@ public class DesktopIntegration {
         Desktop.getDesktop().setAboutHandler(e -> igvMenuBar.showAboutDialog());
     }
 
+    private static final Logger log = LogManager.getLogger(DesktopIntegration.class);
+
+    /**
+     * Debug-log helper that writes to a dedicated file (independent of the main
+     * log, which may not be initialized during the earliest startup phase) plus
+     * the normal logger.  Used to diagnose macOS open-file event delivery.
+     */
+    private static void debugLog(String msg) {
+        try {
+            java.nio.file.Files.write(java.nio.file.Paths.get(System.getProperty("user.home"), ".igvx", "open-file-debug.log"),
+                    (java.time.Instant.now() + " " + msg + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignore) {
+            // debug logging must never break startup
+        }
+        log.info(msg);
+    }
+
+    /**
+     * Files delivered by macOS open-file events that arrived before IGV was
+     * fully initialized (cold launch: Finder double-click / Open With).  The
+     * handler is installed very early in {@code Main.main}; any files received
+     * before {@link #setIgvReady(org.broad.igv.ui.IGV)} are buffered here and
+     * drained immediately once the IGV instance exists.  Without this buffer,
+     * macOS Apple Events that arrive during the (long) IGV startup are silently
+     * dropped because {@code java.awt.Desktop} only delivers events to the
+     * currently-registered handler.
+     */
+    private static final List<File> pendingOpenFiles = Collections.synchronizedList(new ArrayList<>());
+    private static volatile boolean openFileHandlerInstalled = false;
+    private static volatile IGV igvReady = null;
+
+    /**
+     * Install the macOS open-file handler as early as possible.  Safe to call
+     * on any platform and multiple times (idempotent).  Call from Main.main
+     * before heavy initialization so a cold-launch Finder event is not lost.
+     */
+    public static void installEarlyOpenFileHandler() {
+        if (openFileHandlerInstalled) {
+            return;
+        }
+        try {
+            if (!Desktop.isDesktopSupported()) {
+                debugLog("installEarlyOpenFileHandler: Desktop not supported");
+                return;
+            }
+            Desktop desktop = Desktop.getDesktop();
+            if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
+                desktop.setOpenFileHandler(e -> {
+                    List<File> files = e.getFiles();
+                    debugLog("macOS open-file event received: " + (files == null ? "null" : files.toString()));
+                    if (files == null || files.isEmpty()) {
+                        return;
+                    }
+                    IGV igv = igvReady;
+                    if (igv != null) {
+                        SmartOpenMenuAction.openFiles(igv, files.toArray(new File[0]));
+                    } else {
+                        // IGV not ready yet (cold launch) -- buffer and drain later
+                        pendingOpenFiles.addAll(files);
+                        debugLog("IGV not ready, buffering " + files.size() + " open-file event(s)");
+                    }
+                });
+                openFileHandlerInstalled = true;
+                debugLog("Installed macOS open-file handler (APP_OPEN_FILE supported)");
+            } else {
+                debugLog("APP_OPEN_FILE not supported on this platform");
+            }
+        } catch (Exception ex) {
+            debugLog("Error installing macOS open-file handler: " + ex);
+        }
+    }
+
+    /**
+     * Mark the IGV instance as ready and drain any buffered open-file events.
+     * Called once after IGV.createInstance completes.
+     */
+    public static void setIgvReady(IGV igv) {
+        igvReady = igv;
+        if (!pendingOpenFiles.isEmpty()) {
+            List<File> files;
+            synchronized (pendingOpenFiles) {
+                files = new ArrayList<>(pendingOpenFiles);
+                pendingOpenFiles.clear();
+            }
+            log.info("Draining " + files.size() + " buffered open-file event(s) after IGV ready");
+            SmartOpenMenuAction.openFiles(igv, files.toArray(new File[0]));
+        }
+    }
+
     /**
      * Install the standard macOS application menu handlers: Preferences
      * (Cmd+,), Quit (Cmd+Q), and Open File (Finder drag-and-drop / Dock).
@@ -94,19 +189,10 @@ public class DesktopIntegration {
             // ignore - handler optional
         }
 
-        try {
-            if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
-                desktop.setOpenFileHandler(e -> {
-                    List<File> files = e.getFiles();
-                    if (files != null && !files.isEmpty()) {
-                        org.broad.igv.ui.action.SmartOpenMenuAction.openFiles(
-                                igvMenuBar.getIgv(), files.toArray(new File[0]));
-                    }
-                });
-            }
-        } catch (Exception e) {
-            // ignore - handler optional
-        }
+        // NOTE: the open-file handler (Finder double-click / Open With / drag
+        // & drop) is installed early in Main.main via installEarlyOpenFileHandler()
+        // so cold-launch Apple Events are not lost during IGV startup.  It is
+        // intentionally NOT re-registered here.
     }
 
     /**
