@@ -3,7 +3,7 @@
 # build_release.sh — reproducible IGV-X macOS release packaging.
 #
 # Produces, under build/release/:
-#   IGV-X.app                     (the renamed, re-launchered, signed app bundle)
+#   IGV-X.app                     (native-launcher app bundle via jpackage)
 #   IGV-X-<version>.dmg           (disk image, UDZO, for most users)
 #   IGV-X-<version>.zip           (alternate distribution)
 #   SHA256SUMS                    (checksums for every artifact)
@@ -12,21 +12,29 @@
 # Usage:
 #   ./scripts/package/build_release.sh [-v <version>] [--skip-tests] [--sign <identity>]
 #
-#   -v <version>    Release version, e.g. 2.19.5-igvx.1 (default: 2.19.5-igvx)
+#   -v <version>    Release version, e.g. 2.19.5-igvx.3 (default: 2.19.5-igvx)
 #   --skip-tests    Skip the full test suite (use with care; release gate = tests green)
 #   --sign <id>     Codesign identity, e.g. "Developer ID Application: Name (TEAMID)".
 #                   Default: ad-hoc signing (-s -) for local/dev builds.
 #   --no-verify     Skip the post-build integrity verification (default: verify everything)
 #
+# WHY jpackage: the app MUST use a native Mach-O launcher (jpackage) so the JVM
+# registers with LaunchServices as org.igvx.IGVX, not the JDK's bundle id.
+# With the old shell-script launcher, macOS routed Finder open-file AppleEvents
+# to the wrong identity and AWT never received them — double-clicking a session
+# file launched IGV-X but silently dropped the file (Runtian bug report,
+# 2026-08-14 msg 175/177, fixed 2026-08-15 commits 166efd284 + d9ab77001).
+# This script now calls build_app_jpackage.sh for the app bundle; the old
+# extract-and-rename path is GONE.
+#
 # Reproducibility notes:
 #   - The upstream gradle Zip task has an input-tracking quirk: if a previous
 #     WithJava zip exists and the jar changed, the zip can be reported
 #     UP-TO-DATE and stay stale. This script ALWAYS deletes the old zip (and
-#     the release staging dir) before building, so the artifact is fresh.
+#     the dist staging dir) before building, so the lib jars are fresh.
 #   - Bundled JDK is vendored in-tree (tools/jdk-21.0.12+8/), gradle home is
 #     project-local (.gradle-home/), so a clean checkout builds the same bits.
-#   - The app bundle gets the IGV-X shell launcher (CWD-independent) and
-#     IGV-X resources (icon). Bundle ID org.igvx.IGVX, name IGV-X.
+#   - Bundle ID org.igvx.IGVX, name IGV-X, native launcher Contents/MacOS/IGV-X.
 #
 # Environment (optional, for Developer ID + notarization later):
 #   IGVX_DEV_ID  — signing identity (overrides --sign)
@@ -65,6 +73,7 @@ echo "=== IGV-X release build: version=$VERSION sign='$SIGN_ID' skip_tests=$SKIP
 # 0. Working dirs
 STAGE="$ROOT/build/release"
 DIST="$ROOT/build/distributions"
+MACAPP_DIST="$ROOT/build/IGV-MacApp-dist"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 
@@ -76,51 +85,54 @@ else
   echo "=== [1/7] SKIPPING test suite (--skip-tests) ==="
 fi
 
-# 2. Force-fresh app bundle zip (delete stale zip to defeat UP-TO-DATE quirk)
-#    Also clean build/IGV-MacApp-dist: it accumulates app bundles from builds
-#    with different -Pversion values (e.g. IGV_user.app) and the zip task
-#    packs EVERYTHING in that dir, silently bloating the release artifact.
-echo "=== [2/7] Building mac app bundle with bundled JDK ==="
-rm -f "$DIST"/IGV_MacApp_"$VERSION"_WithJava.zip
-rm -rf "$ROOT/build/IGV-MacApp-dist"
+# 2. Build the gradle mac-app dist — we need its Java/lib dir (igv.jar + deps)
+#    for jpackage.  Force-fresh: delete stale zip and the dist dir (it
+#    accumulates app bundles from builds with different -Pversion values).
+echo "=== [2/7] Building gradle mac-app dist (for lib jars) ==="
+rm -f "$DIST"/IGV_MacApp_*_WithJava.zip
+rm -rf "$MACAPP_DIST"
 ./gradlew createMacAppWithJavaDistZip \
     -PjdkBundleMac="$JDK" -Pversion="$VERSION" \
     --console=plain
 
-ZIP="$DIST/IGV_MacApp_${VERSION}_WithJava.zip"
-if [[ ! -f "$ZIP" ]]; then
-  echo "ERROR: expected zip not produced: $ZIP" >&2; exit 1
+# Find the .app directory produced by gradle in the dist dir.
+GRADLE_APP="$(find "$MACAPP_DIST" -maxdepth 1 -type d -name '*.app' | head -1)"
+if [[ -z "$GRADLE_APP" || ! -d "$GRADLE_APP" ]]; then
+  echo "ERROR: no .app found in $MACAPP_DIST" >&2; ls "$MACAPP_DIST" >&2; exit 1
 fi
+LIB_DIR="$GRADLE_APP/Contents/Java/lib"
+if [[ ! -f "$LIB_DIR/igv.jar" ]]; then
+  echo "ERROR: $LIB_DIR/igv.jar not found" >&2; exit 1
+fi
+echo "   lib jars from: $LIB_DIR"
 
-# 3. Extract and rename to IGV-X.app
-echo "=== [3/7] Staging IGV-X.app ==="
-STAGE_ZIP="$STAGE/from-gradle.zip"
-cp "$ZIP" "$STAGE_ZIP"
-(cd "$STAGE" && unzip -q from-gradle.zip && rm -f from-gradle.zip)
+# 3. Build IGV-X.app with jpackage (native Mach-O launcher)
+echo "=== [3/7] Building IGV-X.app via jpackage (native launcher) ==="
+# Extract the base dotted version (e.g. "2.19.5" from "2.19.5-igvx.3")
+BASE_VER="$(echo "$VERSION" | sed 's/-.*//')"
+"$ROOT/scripts/package/build_app_jpackage.sh" "$LIB_DIR" "$STAGE" "$BASE_VER"
 
-APP_SRC="$STAGE/IGV_${VERSION}.app"
 APP="$STAGE/IGV-X.app"
-if [[ ! -d "$APP_SRC" ]]; then
-  echo "ERROR: app bundle not found in zip: $APP_SRC" >&2; ls "$STAGE" >&2; exit 1
+if [[ ! -d "$APP" ]]; then
+  echo "ERROR: IGV-X.app not produced by jpackage" >&2; ls "$STAGE" >&2; exit 1
 fi
-# Defensive: drop any other app bundles the zip may carry (stale blobs).
-find "$STAGE" -maxdepth 1 -type d -name '*.app' ! -path "$APP_SRC" -exec rm -rf {} +
-mv "$APP_SRC" "$APP"
 
-# 4. Enforce IGV-X launcher + resources (defensive: the gradle dist copies our
-#    launcher from scripts/mac.app, but verify and re-copy so a future upstream
-#    change cannot silently reintroduce the CWD-sensitive stock launcher).
-LAUNCHER="$APP/Contents/MacOS/IGV"
-if ! grep -q 'IGV-X launcher' "$LAUNCHER" 2>/dev/null; then
-  echo "INFO: replacing launcher with IGV-X shell launcher"
-  cp scripts/mac.app/Contents/MacOS/IGV "$LAUNCHER"
-  chmod 775 "$LAUNCHER"
+# Patch the app version to match the release version (build_app_jpackage.sh
+# sets the base version; we ensure it matches here).
+PLIST="$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $BASE_VER" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BASE_VER" "$PLIST" 2>/dev/null || true
+
+# 4. Verify the native launcher is present (not a shell script)
+LAUNCHER="$APP/Contents/MacOS/IGV-X"
+if [[ ! -x "$LAUNCHER" ]]; then
+  echo "ERROR: native launcher IGV-X not found at $LAUNCHER" >&2; exit 1
 fi
-for RES in IGV_64.png igv_icon.icns; do
-  if [[ ! -f "$APP/Contents/Resources/$RES" ]]; then
-    cp "scripts/mac.app/Contents/Resources/$RES" "$APP/Contents/Resources/"
-  fi
-done
+file "$LAUNCHER" | grep -q 'Mach-O' || {
+  echo "ERROR: launcher is not a Mach-O binary — jpackage may have failed" >&2
+  file "$LAUNCHER" >&2; exit 1
+}
+echo "   native launcher: $(file "$LAUNCHER" | cut -d: -f2-)"
 
 # 5. Codesign
 #    --force --deep so nested jars/executables get signatures too.
@@ -150,19 +162,21 @@ git_head=$(git rev-parse --short HEAD)
 git_describe=$(git describe --tags --always 2>/dev/null || echo none)
 signing=$SIGN_ID
 jdk=$(cd "$JDK" && pwd)
+launcher=native-jpackage
 EOF
 
 # Optional post-build verification
 if [[ "$VERIFY" == "1" ]]; then
   echo "=== [7/7] Verifying artifacts ==="
   codesign --verify --deep --strict "$APP" || { echo "FAIL: codesign verify" >&2; exit 1; }
-  /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist" | grep -q 'org.igvx.IGVX' || { echo "FAIL: bundle id" >&2; exit 1; }
-  /usr/libexec/PlistBuddy -c 'Print CFBundleName' "$APP/Contents/Info.plist" | grep -q 'IGV-X' || { echo "FAIL: bundle name" >&2; exit 1; }
-  test -x "$APP/Contents/MacOS/IGV" || { echo "FAIL: launcher not executable" >&2; exit 1; }
-  grep -q 'IGV-X launcher' "$APP/Contents/MacOS/IGV" || { echo "FAIL: wrong launcher" >&2; exit 1; }
-  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$APP/Contents/Info.plist" | grep -q 'org.igvx.session' || { echo "FAIL: session document type" >&2; exit 1; }
-  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:1:LSItemContentTypes:0' "$APP/Contents/Info.plist" | grep -q 'public.xml' || { echo "FAIL: xml Open With type" >&2; exit 1; }
-  /usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeIdentifier' "$APP/Contents/Info.plist" | grep -q 'org.igvx.session' || { echo "FAIL: exported UTI" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$PLIST" | grep -q 'org.igvx.IGVX' || { echo "FAIL: bundle id" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print CFBundleName' "$PLIST" | grep -q 'IGV-X' || { echo "FAIL: bundle name" >&2; exit 1; }
+  # Native launcher (Mach-O, not shell script)
+  file "$LAUNCHER" | grep -q 'Mach-O' || { echo "FAIL: launcher not Mach-O" >&2; exit 1; }
+  # Document types
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$PLIST" | grep -q 'org.igvx.session' || { echo "FAIL: session document type" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:1:LSItemContentTypes:0' "$PLIST" | grep -q 'public.xml' || { echo "FAIL: xml Open With type" >&2; exit 1; }
+  /usr/libexec/PlistBuddy -c 'Print :UTExportedTypeDeclarations:0:UTTypeIdentifier' "$PLIST" | grep -q 'org.igvx.session' || { echo "FAIL: exported UTI" >&2; exit 1; }
   hdiutil verify "$DMG" >/dev/null
   echo "Verification OK."
 fi
@@ -171,4 +185,4 @@ echo
 echo "=== Release artifacts in $STAGE ==="
 ls -lh "$STAGE"
 echo
-echo "DONE: IGV-X $VERSION packaged."
+echo "DONE: IGV-X $VERSION packaged (native jpackage launcher)."

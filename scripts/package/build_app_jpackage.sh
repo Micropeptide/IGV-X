@@ -18,10 +18,11 @@
 # cold-launch session opens now work (verified 2026-08-15 with a real session).
 #
 # Usage:
-#   ./scripts/package/build_app_jpackage.sh <lib-dir> <out-dir>
+#   ./scripts/package/build_app_jpackage.sh <lib-dir> <out-dir> [version]
 #     <lib-dir>  the dist Java/lib dir containing igv.jar + dependencies
 #                (e.g. build/IGV-MacApp-dist/IGV_<ver>.app/Contents/Java/lib)
 #     <out-dir>  destination dir; writes <out-dir>/IGV-X.app
+#     [version]  optional app version (default: 2.19.5)
 #
 # Requires: the vendored JDK (tools/jdk-21.0.12+8) which ships jpackage.
 
@@ -30,8 +31,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-LIB_DIR="${1:?usage: build_app_jpackage.sh <lib-dir> <out-dir>}"
-OUT_DIR="${2:?usage: build_app_jpackage.sh <lib-dir> <out-dir>}"
+LIB_DIR="${1:?usage: build_app_jpackage.sh <lib-dir> <out-dir> [version]}"
+OUT_DIR="${2:?usage: build_app_jpackage.sh <lib-dir> <out-dir> [version]}"
+APP_VERSION="${3:-2.19.5}"   # optional; defaults to 2.19.5
 JDK="$ROOT/tools/jdk-21.0.12+8"
 JAVA_HOME="$JDK/Contents/Home"
 JPACKAGE="$JAVA_HOME/bin/jpackage"
@@ -54,7 +56,7 @@ mkdir -p "$OUT_DIR"
 # embedded runtime.  The JVM options mirror the old Java/igv.args file.
 "$JPACKAGE" --type app-image \
   --name "IGV-X" \
-  --app-version "2.19.5" \
+  --app-version "$APP_VERSION" \
   --module-path "$LIB_DIR" \
   --module org.igv/org.broad.igv.ui.Main \
   --java-options "-Xmx8g" \

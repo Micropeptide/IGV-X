@@ -3,7 +3,7 @@
 Reproducible macOS packaging for IGV-X: bundle, Apple Silicon, signing/
 notarization where possible, DMG/ZIP, versioning, checksums.
 
-## 1. Current state (2026-08-10)
+## 1. Current state (2026-08-17)
 
 The build is verified for development (`./gradlew compileJava test` with
 vendored JDK 21 + Gradle 8.10.1). **The app bundle is built and installed**:
@@ -11,33 +11,41 @@ vendored JDK 21 + Gradle 8.10.1). **The app bundle is built and installed**:
 launch verified). This document is the release contract for moving from
 ad-hoc local install to signed/notarized distribution.
 
-## 1.1 Quick local build + install (what was done)
+## 1.1 Quick local build + install (current flow)
 
 ```bash
-# Build the mac app bundle WITH bundled JDK (separate from createMacAppDist!):
+# 1. Build the gradle mac-app dist (produces lib jars for jpackage):
 ./gradlew createMacAppWithJavaDistZip \
   -PjdkBundleMac=$PWD/tools/jdk-21.0.12+8 -Pversion=2.19.5-igvx
-# → build/distributions/IGV_MacApp_2.19.5-igvx_WithJava.zip
-# Unzip to a staging dir; rename the .app to IGV-X.app; ad-hoc codesign:
-codesign --force --deep -s - IGV-X.app
-# Install:
-cp -R IGV-X.app /Applications/
-# Verify launch (bundled JDK, independent of CWD):
+# 2. Build the app bundle with jpackage (native Mach-O launcher):
+./scripts/package/build_app_jpackage.sh \
+  build/IGV-MacApp-dist/IGV_2.19.5-igvx.app/Contents/Java/lib build/release
+# 3. Ad-hoc codesign + install:
+codesign --force --deep -s - build/release/IGV-X.app
+cp -R build/release/IGV-X.app /Applications/
+# 4. Verify launch (native launcher, Finder session-open works):
 open /Applications/IGV-X.app
 ```
 
-Known quirk: the upstream compiled `Contents/MacOS/IGV` launcher is
-CWD-sensitive (exits 255 if run from outside `Contents/`). IGV-X replaces it
-with a robust shell launcher (`scripts/mac.app/Contents/MacOS/IGV`, commit
-689c2dbe1) that resolves paths from its own location, uses the bundled JDK,
-and honors `~/igvx/java_arguments`.
+**Why jpackage**: the app uses a native Mach-O launcher
+(`Contents/MacOS/IGV-X`) produced by `jpackage`, so the JVM registers with
+LaunchServices as `org.igvx.IGVX` (not the JDK's bundle id). This is what
+makes Finder double-click session-file opens work — macOS routes
+open-file AppleEvents to the app by its registered bundle id, and the
+native launcher ensures the identity matches. The old shell-script
+launcher registered as `net.java.openjdk.jdk` and silently dropped files
+(fixed 2026-08-15, commits 166efd284 + d9ab77001).
+
+For a full release (tests + DMG + ZIP + checksums), use:
+```bash
+./scripts/package/build_release.sh -v 2.19.5-igvx.3
+```
 
 
 ## 2. App identity (must not collide with stock IGV)
 
 - App name: **IGV-X** (never "IGV").
-- Bundle ID: `org.igvx.app` (or similar — finalized here, distinct from
-  stock IGV's `org.broad.igv`).
+- Bundle ID: `org.igvx.IGVX` (distinct from stock IGV's `org.broad.igv`).
 - Data locations (charter): `~/igvx` or macOS Application Support under
   the IGV-X bundle ID; **separate** prefs, caches, logs, and session
   storage. Never touch `~/igv`, `~/.igv`, or stock IGV's state.
@@ -76,11 +84,12 @@ checkout with the vendored toolchain (`tools/jdk-21.0.12+8/`,
   or `xattr -dr com.apple.quarantine`).
 - Hardened runtime: `--options runtime` for notarized builds.
 - **Implemented**: `scripts/package/build_release.sh` codifies the full
-  pipeline — fresh bundle build (with the stale-app-dir cleanup so the
-  zip never carries leftover `IGV_user.app`-style blobs), IGV-X launcher/
-  resource enforcement, ad-hoc or Developer ID codesign, UDZO DMG + ZIP,
-  `SHA256SUMS`, and `version.txt` metadata, plus post-build verification
-  (codesign verify, plist identity, launcher, `hdiutil verify`). See
+  pipeline — fresh gradle dist build (for lib jars), jpackage app-image
+  build (native Mach-O launcher, `build_app_jpackage.sh`), Info.plist
+  patching (bundle ID, document types, UTIs), ad-hoc or Developer ID
+  codesign, UDZO DMG + ZIP, `SHA256SUMS`, and `version.txt` metadata,
+  plus post-build verification (codesign verify, plist identity, native
+  launcher Mach-O check, document types, `hdiutil verify`). See
   `scripts/package/README.md`. Notarization (`notarytool` + stapler)
   remains future work — keep secrets out of the repo (env vars / Keychain).
 

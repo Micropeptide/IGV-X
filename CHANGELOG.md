@@ -27,6 +27,18 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
     extended `SessionMetadataTest` (history round-trip), new `MockTrack` test
     helper.
 
+### Changed
+- **Release pipeline now uses jpackage** (build_release.sh rewritten):
+  The release script previously used the old gradle-zip-extract-and-rename
+  path with a shell-script launcher — the same launcher that caused the
+  Finder session-open bug (JVM registered as the JDK's bundle id, not
+  org.igvx.IGVX, so macOS dropped open-file AppleEvents). The release script
+  now calls `build_app_jpackage.sh` to produce the app bundle with a native
+  Mach-O launcher, ensuring every published release has the Finder-open fix.
+  `build_app_jpackage.sh` also gained an optional `[version]` argument.
+  Post-build verification now checks for a Mach-O launcher (not a shell
+  script). docs/release.md updated to reflect the jpackage flow.
+
 ### Added
 - **macOS Finder association for IGV session files**: IGV-X now registers
   itself with LaunchServices so IGV session files (.igvx, .session,
