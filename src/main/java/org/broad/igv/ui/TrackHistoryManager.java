@@ -27,8 +27,12 @@ package org.broad.igv.ui;
 
 import com.google.gson.JsonArray;
 import org.broad.igv.event.DataLoadedEvent;
+import org.broad.igv.event.GenomeChangeEvent;
+import org.broad.igv.event.IGVEvent;
 import org.broad.igv.event.IGVEventBus;
 import org.broad.igv.event.IGVEventObserver;
+import org.broad.igv.feature.genome.Genome;
+import org.broad.igv.feature.genome.GenomeManager;
 import org.broad.igv.logging.LogManager;
 import org.broad.igv.logging.Logger;
 import org.broad.igv.track.BlatTrack;
@@ -41,6 +45,7 @@ import org.broad.igv.ui.panel.MainPanel;
 import org.broad.igv.ui.panel.TrackPanel;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,6 +54,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -70,7 +76,7 @@ import java.util.Set;
  * human-readable log of operations is available via {@link #getHistoryLog()}
  * and is persisted in the .igvx.json companion by the session writer.</p>
  */
-public class TrackHistoryManager {
+public class TrackHistoryManager implements IGVEventObserver {
 
     private static final Logger log = LogManager.getLogger(TrackHistoryManager.class);
 
@@ -83,6 +89,12 @@ public class TrackHistoryManager {
 
     private boolean applying = false;
     private boolean recording = false;
+    private String lastGenomeId;
+    private Snapshot lastSnapshot;
+
+    public TrackHistoryManager() {
+        IGVEventBus.getInstance().subscribe(GenomeChangeEvent.class, this);
+    }
 
     /**
      * Record a mutation: capture before/after snapshots and push an undo entry.
@@ -92,7 +104,7 @@ public class TrackHistoryManager {
      * collapsed: only the outermost record() creates an undo entry.
      */
     public void record(String description, Runnable mutation) {
-        if (recording) {
+        if (recording || applying) {
             mutation.run();
             return;
         }
@@ -102,22 +114,30 @@ public class TrackHistoryManager {
             mutation.run();
             Snapshot after = capture();
             if (before.equals(after)) {
+                lastSnapshot = after;
+                lastGenomeId = after.genomeId;
                 return;
             }
-            undoStack.push(new Entry(description, before, after));
-            while (undoStack.size() > MAX_UNDO) {
-                undoStack.removeLast();
-            }
-            redoStack.clear();
-            historyLog.add(description);
-            if (historyLog.size() > MAX_UNDO * 4) {
-                historyLog.subList(0, historyLog.size() - MAX_UNDO * 4).clear();
-            }
-            if (IGV.hasInstance()) {
-                IGV.getInstance().setSessionModified(true);
-            }
+            pushEntry(description, before, after);
+            lastSnapshot = after;
+            lastGenomeId = after.genomeId;
         } finally {
             recording = false;
+        }
+    }
+
+    private void pushEntry(String description, Snapshot before, Snapshot after) {
+        undoStack.push(new Entry(description, before, after));
+        while (undoStack.size() > MAX_UNDO) {
+            undoStack.removeLast();
+        }
+        redoStack.clear();
+        historyLog.add(description);
+        if (historyLog.size() > MAX_UNDO * 4) {
+            historyLog.subList(0, historyLog.size() - MAX_UNDO * 4).clear();
+        }
+        if (IGV.hasInstance()) {
+            IGV.getInstance().setSessionModified(true);
         }
     }
 
@@ -147,9 +167,12 @@ public class TrackHistoryManager {
         if (undoStack.isEmpty()) {
             return null;
         }
-        Entry e = undoStack.pop();
+        Entry e = undoStack.peek();
+        if (!applySnapshot(e.before)) {
+            return null;
+        }
+        undoStack.pop();
         redoStack.push(e);
-        apply(e.before);
         return e.description;
     }
 
@@ -161,9 +184,12 @@ public class TrackHistoryManager {
         if (redoStack.isEmpty()) {
             return null;
         }
-        Entry e = redoStack.pop();
+        Entry e = redoStack.peek();
+        if (!applySnapshot(e.after)) {
+            return null;
+        }
+        redoStack.pop();
         undoStack.push(e);
-        apply(e.after);
         return e.description;
     }
 
@@ -207,8 +233,9 @@ public class TrackHistoryManager {
      * initialized (returns an empty snapshot), which keeps unit tests headless.
      */
     public Snapshot capture() {
+        String genomeId = GenomeManager.getInstance().getGenomeId();
         if (!IGV.hasInstance()) {
-            return new Snapshot(Collections.emptyList(), Collections.emptyMap(), null);
+            return new Snapshot(Collections.emptyList(), Collections.emptyMap(), null, genomeId);
         }
         IGV igv = IGV.getInstance();
         List<TrackPanel> panels = igv.getTrackPanels();
@@ -223,7 +250,31 @@ public class TrackHistoryManager {
             }
             panelTracks.put(name, states);
         }
-        return new Snapshot(panelOrder, panelTracks, igv.getGroupByAttribute());
+        return new Snapshot(panelOrder, panelTracks, igv.getGroupByAttribute(), genomeId);
+    }
+
+    @Override
+    public void receiveEvent(IGVEvent event) {
+        if (!(event instanceof GenomeChangeEvent genomeEvent) || applying) {
+            return;
+        }
+        Genome genome = genomeEvent.genome();
+        String newGenomeId = genome == null ? null : genome.getId();
+        if (Objects.equals(newGenomeId, lastGenomeId)) {
+            lastSnapshot = capture();
+            return;
+        }
+
+        // GenomeManager resets the current session before publishing this event.
+        // Keep the prior panel snapshot so undo can restore the tracks belonging
+        // to the previous genome rather than only the newly-reset layout.
+        Snapshot after = capture();
+        if (lastSnapshot != null && lastGenomeId != null) {
+            Snapshot before = lastSnapshot.withGenomeId(lastGenomeId);
+            pushEntry("Load genome: " + (genome == null ? newGenomeId : genome.getDisplayName()), before, after);
+        }
+        lastSnapshot = after;
+        lastGenomeId = newGenomeId;
     }
 
     /**
@@ -232,12 +283,34 @@ public class TrackHistoryManager {
      * snapshot never re-enters {@link #record}.
      */
     public void apply(Snapshot target) {
+        applySnapshot(target);
+    }
+
+    private boolean applySnapshot(Snapshot target) {
         if (!IGV.hasInstance()) {
-            return;
+            return true;
         }
         applying = true;
         try {
             IGV igv = IGV.getInstance();
+
+            String currentGenomeId = GenomeManager.getInstance().getGenomeId();
+            if (!Objects.equals(target.genomeId, currentGenomeId)) {
+                if (target.genomeId == null) {
+                    log.warn("Cannot restore undo snapshot without a genome ID while genome " + currentGenomeId + " is loaded");
+                    return false;
+                }
+                try {
+                    boolean loaded = GenomeManager.getInstance().loadGenomeById(target.genomeId);
+                    if (!loaded || !Objects.equals(target.genomeId, GenomeManager.getInstance().getGenomeId())) {
+                        log.warn("Unable to restore genome for undo snapshot: " + target.genomeId);
+                        return false;
+                    }
+                } catch (IOException e) {
+                    log.warn("Unable to restore genome for undo snapshot: " + target.genomeId, e);
+                    return false;
+                }
+            }
 
             // 1. Remove panels that should not exist, clearing their tracks first.
             Set<String> targetPanelNames = new LinkedHashSet<>(target.panelOrder);
@@ -279,6 +352,9 @@ public class TrackHistoryManager {
             igv.revalidateTrackPanels();
             igv.repaint();
             igv.setSessionModified(true);
+            lastSnapshot = capture();
+            lastGenomeId = GenomeManager.getInstance().getGenomeId();
+            return true;
         } finally {
             applying = false;
         }
@@ -330,11 +406,22 @@ public class TrackHistoryManager {
         final List<String> panelOrder;
         final Map<String, List<TrackState>> panelTracks;
         final String groupByAttribute;
+        final String genomeId;
 
-        Snapshot(List<String> panelOrder, Map<String, List<TrackState>> panelTracks, String groupByAttribute) {
+        Snapshot(List<String> panelOrder, Map<String, List<TrackState>> panelTracks, String groupByAttribute, String genomeId) {
             this.panelOrder = new ArrayList<>(panelOrder);
-            this.panelTracks = new LinkedHashMap<>(panelTracks);
+            this.panelTracks = new LinkedHashMap<>();
+            panelTracks.forEach((name, tracks) -> this.panelTracks.put(name, new ArrayList<>(tracks)));
             this.groupByAttribute = groupByAttribute;
+            this.genomeId = genomeId;
+        }
+
+        Snapshot withGenomeId(String id) {
+            return new Snapshot(panelOrder, panelTracks, groupByAttribute, id);
+        }
+
+        public String getGenomeId() {
+            return genomeId;
         }
 
         public List<String> getPanelOrder() {
@@ -352,6 +439,7 @@ public class TrackHistoryManager {
             if (!(o instanceof Snapshot)) return false;
             Snapshot that = (Snapshot) o;
             if (!panelOrder.equals(that.panelOrder)) return false;
+            if (!Objects.equals(genomeId, that.genomeId)) return false;
             if (groupByAttribute == null ? that.groupByAttribute != null
                     : !groupByAttribute.equals(that.groupByAttribute)) return false;
             if (panelTracks.size() != that.panelTracks.size()) return false;
@@ -364,7 +452,7 @@ public class TrackHistoryManager {
 
         @Override
         public int hashCode() {
-            return panelOrder.hashCode();
+            return Objects.hash(panelOrder, genomeId, groupByAttribute, panelTracks);
         }
     }
 

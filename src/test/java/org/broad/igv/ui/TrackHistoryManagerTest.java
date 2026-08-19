@@ -1,8 +1,11 @@
 package org.broad.igv.ui;
 
+import org.broad.igv.event.GenomeChangeEvent;
+import org.broad.igv.event.IGVEventObserver;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -83,5 +86,27 @@ public class TrackHistoryManagerTest {
         assertEquals(empty1, empty2);
         assertEquals(empty1.hashCode(), empty2.hashCode());
         assertTrue(empty1.getPanelOrder().isEmpty());
+    }
+
+    @Test
+    public void testGenomeIdIsPartOfSnapshotIdentity() {
+        TrackHistoryManager.Snapshot genomeA = new TrackHistoryManager.Snapshot(
+                Collections.emptyList(), Collections.emptyMap(), null, "genome-a");
+        TrackHistoryManager.Snapshot genomeB = new TrackHistoryManager.Snapshot(
+                Collections.emptyList(), Collections.emptyMap(), null, "genome-b");
+        assertNotEquals(genomeA, genomeB);
+        assertEquals("genome-a", genomeA.getGenomeId());
+    }
+
+    @Test
+    public void testGenomeChangeObserverContractIsHeadlessSafe() {
+        assertTrue(IGVEventObserver.class.isAssignableFrom(TrackHistoryManager.class));
+        try {
+            TrackHistoryManager.class.getMethod("receiveEvent", org.broad.igv.event.IGVEvent.class);
+        } catch (NoSuchMethodException e) {
+            fail("TrackHistoryManager must observe IGV events");
+        }
+        history.receiveEvent(new GenomeChangeEvent(null));
+        assertNotNull(history.capture());
     }
 }

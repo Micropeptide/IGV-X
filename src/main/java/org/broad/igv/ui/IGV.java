@@ -1090,7 +1090,13 @@ public class IGV implements IGVEventObserver {
      */
     public void resetSession(String sessionPath) {
         setSessionModified(false);
-        trackHistory.reset();
+        // Genome-load undo/redo applies a target genome through GenomeManager,
+        // whose normal load path calls resetSession before publishing the change
+        // event. Preserve the in-flight history entry while that snapshot is
+        // being restored; ordinary session resets still clear history.
+        if (!trackHistory.isApplying()) {
+            trackHistory.reset();
+        }
 
         session.reset(sessionPath);
         AttributeManager.getInstance().clearAllAttributes();
