@@ -19,8 +19,10 @@ Builds a complete IGV-X release from a clean-ish state:
 4. **Enforce IGV-X launcher + resources** — verifies the bundle carries the
    CWD-independent IGV-X shell launcher (grep for `IGV-X launcher`);
    re-copies from `scripts/mac.app` if a future upstream change ever
-   reintroduces the stock CWD-sensitive launcher. Also verifies/copies
-   `IGV_64.png` and `igv_icon.icns`.
+   reintroduces the stock CWD-sensitive launcher. The tracked icon assets are
+   real RGBA PNG/alpha-bearing ICNS files; `prepare_icon_assets.py` is the
+   reproducible conversion helper for replacing the original JPEG artwork
+   without restoring the white rounded-corner matte.
 5. **Codesign** — ad-hoc (`-s -`) by default; `--sign "Developer ID
    Application: ..."` (or `IGVX_DEV_ID` env) for Developer ID builds with
    hardened runtime.

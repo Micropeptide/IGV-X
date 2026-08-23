@@ -38,6 +38,11 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
   `build_app_jpackage.sh` also gained an optional `[version]` argument.
   Post-build verification now checks for a Mach-O launcher (not a shell
   script). docs/release.md updated to reflect the jpackage flow.
+- **Transparent IGV-X Dock icon**: replaced the legacy JPEG artwork stored
+  under PNG/ICNS names with real RGBA PNG and alpha-bearing ICNS assets. The
+  packaging script now rejects an opaque `IGV_64.png`, and
+  `prepare_icon_assets.py` provides a reproducible edge-matte conversion for
+  future artwork updates.
 
 ### Added
 - **macOS Finder association for IGV session files**: IGV-X now registers

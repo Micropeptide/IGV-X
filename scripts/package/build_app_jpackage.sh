@@ -37,6 +37,8 @@ APP_VERSION="${3:-2.19.5}"   # optional; defaults to 2.19.5
 JDK="$ROOT/tools/jdk-21.0.12+8"
 JAVA_HOME="$JDK/Contents/Home"
 JPACKAGE="$JAVA_HOME/bin/jpackage"
+# These must remain real alpha-bearing assets.  A JPEG renamed to .png gives
+# macOS a white matte in the Dock even though the filename looks correct.
 ICON="$ROOT/scripts/mac.app/Contents/Resources/IGV_64.png"
 ICNS="$ROOT/scripts/mac.app/Contents/Resources/igv_icon.icns"
 
@@ -46,6 +48,10 @@ if [[ ! -x "$JPACKAGE" ]]; then
 fi
 if [[ ! -f "$LIB_DIR/igv.jar" ]]; then
   echo "ERROR: $LIB_DIR/igv.jar not found; run the gradle dist build first" >&2
+  exit 1
+fi
+if ! /usr/bin/sips -g hasAlpha "$ICON" 2>/dev/null | grep -q 'hasAlpha: yes'; then
+  echo "ERROR: $ICON must be a PNG with an alpha channel (white Dock matte risk)" >&2
   exit 1
 fi
 
