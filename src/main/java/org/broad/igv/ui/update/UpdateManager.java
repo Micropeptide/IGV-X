@@ -71,7 +71,9 @@ public class UpdateManager {
             if (!PreferencesManager.getPreferences().getAsBoolean(PREF_CHECK_ON_STARTUP)) {
                 return;
             }
-            checkAndShow(parent);
+            // Startup checks must stay quiet when IGV-X is already up to date;
+            // only surface the dialog when a newer build is available.
+            checkAndShowIfUpdate(parent);
         } catch (Exception e) {
             log.warn("Startup update check skipped: " + e.getMessage());
         }

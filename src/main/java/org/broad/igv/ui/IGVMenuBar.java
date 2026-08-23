@@ -1020,6 +1020,18 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText("Check the Micropeptide/IGV-X GitHub page for a newer IGV-X build");
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: persistent update schedule and startup-check settings
+        menuAction =
+                new MenuAction("Update Settings...") {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        org.broad.igv.ui.update.UpdateSetupDialog.showSettings(igv.getMainFrame());
+                    }
+                };
+        menuAction.setToolTipText("Choose update-check frequency and startup behavior");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         // IGV-X: request a feature by composing an email to micropeptide@icloud.com
         menuAction =
                 new MenuAction("Request a Feature...") {

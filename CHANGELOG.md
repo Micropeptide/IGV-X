@@ -43,6 +43,10 @@ Versions follow the upstream version they fork, with an `-X` suffix for IGV-X re
   packaging script now rejects an opaque `IGV_64.png`, and
   `prepare_icon_assets.py` provides a reproducible edge-matte conversion for
   future artwork updates.
+- **Update-check controls corrected and exposed**: normal startup checks are
+  now silent when IGV-X is current (the dialog appears only for an available
+  update), and Help > Update Settings... now edits Daily / Weekly / Never
+  scheduling and startup-check behavior after first launch.
 
 ### Added
 - **macOS Finder association for IGV session files**: IGV-X now registers

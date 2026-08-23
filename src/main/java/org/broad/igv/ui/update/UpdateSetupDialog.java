@@ -58,6 +58,17 @@ public class UpdateSetupDialog extends JDialog {
     }
 
     /**
+     * Open the persistent update settings dialog from the Help menu.
+     */
+    public static void showSettings(Window parent) {
+        SwingUtilities.invokeLater(() -> {
+            UpdateSetupDialog dlg = new UpdateSetupDialog(parent, false);
+            dlg.setLocationRelativeTo(parent);
+            dlg.setVisible(true);
+        });
+    }
+
+    /**
      * True when the user has an automatic check interval configured (> 0).
      */
     public static boolean isAutoCheckEnabled() {
@@ -76,7 +87,11 @@ public class UpdateSetupDialog extends JDialog {
     }
 
     private UpdateSetupDialog(Window parent) {
-        super(parent, "Welcome to IGV-X — Updates", ModalityType.APPLICATION_MODAL);
+        this(parent, true);
+    }
+
+    private UpdateSetupDialog(Window parent, boolean firstRun) {
+        super(parent, firstRun ? "Welcome to IGV-X — Updates" : "IGV-X Update Settings", ModalityType.APPLICATION_MODAL);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         JPanel main = new JPanel(new BorderLayout(12, 12));
@@ -88,10 +103,13 @@ public class UpdateSetupDialog extends JDialog {
         intro.setLineWrap(true);
         intro.setWrapStyleWord(true);
         intro.setOpaque(false);
-        intro.setText("IGV-X is a customized version of IGV built specifically for micropeptide's research " +
+        intro.setText(firstRun
+                ? "IGV-X is a customized version of IGV built specifically for micropeptide's research " +
                 "(Arabidopsis epigenetics / WGBS).\n\n" +
                 "New versions and release notes are published on the micropeptide GitHub page. " +
-                "Would you like IGV-X to check for updates automatically?");
+                "Would you like IGV-X to check for updates automatically?"
+                : "Choose how IGV-X should check the Micropeptide/IGV-X GitHub page for new releases. " +
+                "Startup checks are silent when you are up to date; a dialog appears only when a newer version is found.");
         main.add(intro, BorderLayout.NORTH);
 
         ButtonGroup group = new ButtonGroup();
@@ -101,7 +119,15 @@ public class UpdateSetupDialog extends JDialog {
         JPanel radios = new JPanel();
         radios.setLayout(new BoxLayout(radios, BoxLayout.Y_AXIS));
         radios.setBorder(BorderFactory.createEmptyBorder(8, 4, 8, 4));
-        weeklyRadio.setSelected(true);
+        if (firstRun) {
+            weeklyRadio.setSelected(true);
+        } else {
+            int configuredHours = getIntervalHours();
+            dailyRadio.setSelected(configuredHours == INTERVAL_DAILY_HOURS);
+            weeklyRadio.setSelected(configuredHours == INTERVAL_WEEKLY_HOURS);
+            neverRadio.setSelected(configuredHours <= 0
+                    || (configuredHours != INTERVAL_DAILY_HOURS && configuredHours != INTERVAL_WEEKLY_HOURS));
+        }
         radios.add(dailyRadio);
         radios.add(Box.createVerticalStrut(8));
         radios.add(weeklyRadio);
@@ -110,7 +136,7 @@ public class UpdateSetupDialog extends JDialog {
         main.add(radios, BorderLayout.CENTER);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        JButton ok = new JButton("OK");
+        JButton ok = new JButton(firstRun ? "OK" : "Save");
         ok.addActionListener(e -> {
             int hours;
             if (dailyRadio.isSelected()) hours = INTERVAL_DAILY_HOURS;
@@ -123,9 +149,9 @@ public class UpdateSetupDialog extends JDialog {
             PreferencesManager.getPreferences().put(PREF_SETUP_DONE, "true");
             dispose();
         });
-        JButton remind = new JButton("Ask me later");
-        remind.addActionListener(e -> dispose());
-        buttons.add(remind);
+        JButton dismiss = new JButton(firstRun ? "Ask me later" : "Cancel");
+        dismiss.addActionListener(e -> dispose());
+        buttons.add(dismiss);
         buttons.add(ok);
         ok.requestFocusInWindow();
         main.add(buttons, BorderLayout.SOUTH);
