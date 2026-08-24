@@ -93,25 +93,31 @@ PLIST="$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :LSApplicationCategoryType string public.app-category.developer-tools' "$PLIST" 2>/dev/null || true
 
 # Document types: org.igvx.session (Owner) + public.xml (Alternate)
-/usr/libexec/PlistBuddy -c 'Add :CFBundleDocumentTypes array' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Add :CFBundleDocumentTypes:0 dict' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:0:CFBundleTypeName "IGV-X Session"' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:0:CFBundleTypeRole Editor' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:0:LSHandlerRank Owner' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Add :CFBundleDocumentTypes:0:LSItemContentTypes array' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:0:LSItemContentTypes:0 org.igvx.session' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Add :CFBundleDocumentTypes:1 dict' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:1:CFBundleTypeName "XML Document"' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:1:CFBundleTypeRole Editor' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:1:LSHandlerRank Alternate' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Add :CFBundleDocumentTypes:1:LSItemContentTypes array' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDocumentTypes:1:LSItemContentTypes:0 public.xml' "$PLIST" 2>/dev/null || true
+# NOTE: PlistBuddy 'Set' can only UPDATE existing entries — it cannot create
+# an element at an index inside a freshly-added empty array/dict (verified:
+# 'Set :A:0:B:0 v' -> "Does Not Exist", while 'Add :A:0:B:0 string v' works).
+# jpackage's generated Info.plist has NONE of these keys, so every element
+# must be created with a typed 'Add'. All calls tolerate re-runs via || true.
+PB=/usr/libexec/PlistBuddy
+$PB -c 'Add :CFBundleDocumentTypes array' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0 dict' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0:CFBundleTypeName string "IGV-X Session"' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0:CFBundleTypeRole string Editor' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0:LSHandlerRank string Owner' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0:LSItemContentTypes array' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string org.igvx.session' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1 dict' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1:CFBundleTypeName string "XML Document"' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1:CFBundleTypeRole string Editor' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1:LSHandlerRank string Alternate' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1:LSItemContentTypes array' "$PLIST" 2>/dev/null || true
+$PB -c 'Add :CFBundleDocumentTypes:1:LSItemContentTypes:0 string public.xml' "$PLIST" 2>/dev/null || true
 
 # Export the org.igvx.session UTI (so .igvx/.session/.idxsession files get the
 # IGV-X icon in Finder) and declare the extension tags.
 /usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations array' "$PLIST" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations:0 dict' "$PLIST" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Set :UTExportedTypeDeclarations:0:UTTypeIdentifier org.igvx.session' "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations:0:UTTypeIdentifier string org.igvx.session' "$PLIST" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations:0:UTTypeDescription string "IGV-X Session"' "$PLIST" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations:0:UTTypeConformsTo array' "$PLIST" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Add :UTExportedTypeDeclarations:0:UTTypeConformsTo:0 string public.xml' "$PLIST" 2>/dev/null || true
@@ -130,5 +136,14 @@ cp "$ICON" "$APP/Contents/Resources/IGV_64.png" 2>/dev/null || true
 
 # Re-register with LaunchServices so Finder picks up the document types.
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP" 2>/dev/null || true
+
+# Fail-fast: verify the plist patch actually landed (the release verifier
+# checks the same keys, but failing HERE pinpoints the jpackage script).
+$PB -c 'Print :CFBundleDocumentTypes:0:LSItemContentTypes:0' "$PLIST" | grep -q 'org.igvx.session' \
+  || { echo "ERROR: plist patch failed (session doc type missing) — see PlistBuddy Add block above" >&2; exit 1; }
+$PB -c 'Print :CFBundleDocumentTypes:1:LSItemContentTypes:0' "$PLIST" | grep -q 'public.xml' \
+  || { echo "ERROR: plist patch failed (xml doc type missing)" >&2; exit 1; }
+$PB -c 'Print :UTExportedTypeDeclarations:0:UTTypeIdentifier' "$PLIST" | grep -q 'org.igvx.session' \
+  || { echo "ERROR: plist patch failed (exported UTI missing)" >&2; exit 1; }
 
 echo "OK: $APP"
