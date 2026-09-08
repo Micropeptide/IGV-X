@@ -17,8 +17,19 @@ large epigenomics sessions.
   global lowercase conversion, never renaming user files.
 - **Large-session performance** for ~900 bigWig sessions: bounded loading
   threads, async loads, honest progress, viewport culling, caching.
-- **Relative session paths** by default, optional `.igvx.json` companion,
-  bookmarks & highlights persisted in the session, cancelable session loading.
+- **Relative session paths by default** — verified symlink-safe (e.g. iCloud
+  Drive) — plus a one-click **Move Session + Data Files Into Folder** that
+  bundles a session and every file it references into one portable,
+  zippable folder.
+- Sessions actually **open on double-click / right-click "Open With" in
+  Finder**, and **dragging a file anywhere onto the window loads it**.
+- **Find Track** (highlight by name across hundreds of tracks), **Reveal
+  Data File(s) in Finder**, **Copy Image to Clipboard**, keyboard
+  Next/Previous Bookmark navigation, file-changed-on-disk warnings on
+  session load and save.
+- Bookmarks & region highlights persisted in the session, optional
+  `.igvx.json` companion, cancelable session loading, **Undo/Redo + Track
+  History** across track edits and genome loads.
 - **High-quality PNG/SVG/PDF export**, multi-track selection, configurable
   default quantitative ranges, trackpad navigation.
 - **Organize tracks by genotype** → CG/CHG/CHH with editable remembered rules.
@@ -26,8 +37,8 @@ large epigenomics sessions.
   dedup/rate-limiting, batch command listener (port 60151).
 - **In-app updates** from this repository's GitHub releases.
 - Modern macOS app (native menu bar, fullscreen, Retina, accessibility),
-  bundled JDK, own bundle ID and prefs (`~/igvx`) — safe to run alongside
-  stock IGV.
+  bundled TAIR10 genome, bundled JDK, own bundle ID and prefs (`~/igvx`) —
+  safe to run alongside stock IGV.
 
 **Downloads & releases:** see [Releases](https://github.com/Micropeptide/IGV-X/releases).
 **Full diff vs stock IGV:** [`docs/changes-vs-igv.md`](docs/changes-vs-igv.md) ·

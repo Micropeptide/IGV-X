@@ -7,7 +7,14 @@ This project is a fork of [IGV](https://github.com/igvteam/IGV) (MIT license).
 Versions follow the upstream version they fork, with an `-X` suffix for IGV-X releases
 (e.g. `2.19.8-X1`), unless a divergent versioning scheme is agreed.
 
-## [Unreleased] — 2.19.X fork base
+## [Unreleased]
+
+Nothing yet.
+
+## [2.19.5-igvx.4] — 2026-09-08
+
+[Release](https://github.com/Micropeptide/IGV-X/releases/tag/v2.19.5-igvx.4) ·
+[Full diff vs stock IGV](docs/changes-vs-igv.md)
 
 ### Added (IGV-X session portability & workflow, 2026-09-07/08)
 - **Move Session + Data Files Into Folder...** (File menu): copies the

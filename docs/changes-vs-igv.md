@@ -115,6 +115,118 @@ session can open immediately. The welcome panel uses the same unified
 `SmartOpenMenuAction` as File > Open (auto-detects files vs sessions).
 (Commit `de583ccb7`.)
 
+### 3.8 Session-portability correctness fixes (2026-09-07/08)
+
+Verifying 3.1 (relative paths) end-to-end against a real running app
+surfaced — and this batch fixed — four real bugs that had been silently
+defeating "relative session paths by default" for part of every saved
+session:
+
+- **`Track/@id` was never actually relative.** `SessionWriter` computed a
+  correctly relativized id, but `AbstractTrack.marshalXML` (called right
+  after) unconditionally overwrote it with the track's raw absolute id.
+  `Resource/@path` had no such collision, which is exactly why a saved
+  session "looked" relative (the `<Resource path=...>` line was fine) while
+  every `<Track id=...>` stayed absolute.
+- **A merged/combined track's member tracks had the same bug
+  independently** — `MergedTracks.marshalXML` marshals its members as
+  nested `<Track>` elements outside `SessionWriter`'s per-track fix, so
+  they were never touched at all.
+- **`index`/`coverage`/`mapping` attributes were never relativized on
+  write**, and on read, a stray `resourceLocator.setCoverage(coverage)` in
+  `IGVSessionReader` clobbered the correctly-resolved absolute coverage
+  path with the raw (possibly relative) attribute string right after it
+  was computed.
+- **Relative-path computation broke across a symlinked directory** (e.g. a
+  Desktop/Documents folder synced by iCloud Drive, or a mapped network
+  share): the old textual comparison found no common path prefix between a
+  symlinked and a non-symlinked route to the same real file and silently
+  fell back to an absolute path.
+
+All four are fixed via one shared `relativizeIfApplicable` check in
+`SessionWriter` (reused by the resource path, track id, nested merged-track
+ids, and index/coverage/mapping — previously four separately-maintained,
+subtly different implementations) plus symlink canonicalization in
+`FileUtils.getRelativePath`. Regression tests: `SessionWriterTrackIdRelativePathTest`,
+`IGVSessionReaderResourcePathTest`, the symlink case in `FileUtilsTest`.
+Commit `67f33c8d4`.
+
+### 3.9 Move Session + Data Files Into Folder...
+
+File > **Move Session + Data Files Into Folder...**: copies the current
+session's file and every local file it references — main data file plus
+each resource's index/coverage/mapping companion, if present — into one
+chosen folder, and writes a copy of the session there with paths relative
+to that folder. Filename collisions across source folders (common with
+WGBS naming, e.g. two different sample folders both containing
+`col0_CG.bw`) are disambiguated automatically. A local (non-bundled) genome
+file is called out in the confirmation dialog as not copied.
+
+This is a **copy**, not a move — the currently open session's identity
+(path, window title, Recent Sessions entry) never changes as a side effect;
+a completion dialog offers "Open Moved Session" to actually switch to the
+new bundle. Stock IGV has no equivalent — moving a session folder to
+another machine previously required manually tracking down and copying
+every referenced file by hand. Commit `67f33c8d4`.
+
+### 3.10 Reveal in Finder / Show Session in Finder (macOS)
+
+Track context menu gains **Reveal Data File(s) in Finder**; File menu
+gains **Show Session in Finder**. Both use `open -R` to select the file(s)
+directly in a Finder window — useful before using 3.9, or just to check
+where a track's file actually lives on disk. Commit `67f33c8d4`.
+
+### 3.11 File-changed-on-disk warnings
+
+- **On session load**: each resource's last-modified time is recorded in
+  the `.igvx.json` companion at save time; opening the session later
+  compares it against the file's current mtime and shows a non-blocking
+  warning listing any resource that changed (e.g. silently reprocessed or
+  regenerated upstream).
+- **On session save**: the silent-overwrite save path (3.5's
+  save-without-prompt) now checks whether the session file itself changed
+  on disk since it was last opened or saved (hand edit, `git checkout`, a
+  cloud-sync conflict copy) and asks for confirmation before overwriting
+  instead of silently clobbering it. The batch/command-port `saveSession`
+  command keeps this tracking in sync too, so a batch-driven save doesn't
+  cause the next interactive save to spuriously warn.
+
+Neither check exists in stock IGV. Commit `67f33c8d4`.
+
+### 3.12 Remove from Recent
+
+Right-click a Recent Files/Sessions row in the welcome panel for a **Remove
+from Recent** option, instead of only the all-or-nothing "Clear Recent
+Files". Commit `67f33c8d4`.
+
+### 3.13 Window-wide drag-and-drop
+
+Stock IGV (and IGV-X until this fix) only accepted a dropped file directly
+on the track data panel. A window-wide `DropTarget` on the content pane now
+covers the header/name panels and empty window space too, routed through
+the same session-vs-track auto-detection as 3.4's unified Open. Commit
+`67f33c8d4`.
+
+### 3.14 Welcome-panel startup race fixed + redesign
+
+- **Fix**: opening a session via Finder (double-click / Open With) loaded
+  the tracks correctly but the "Welcome to IGV-X" panel stayed on top of
+  them — a race between the async Finder-delivered load and the startup
+  code's unconditional "show welcome if nothing was loaded" check (which
+  only knew about CLI arguments, not an in-flight Finder open-file event).
+  A failed or empty Finder-triggered open now explicitly re-shows the
+  panel too, so a corrupt/unsupported file at cold launch can't leave a
+  permanently blank window.
+- **Redesign**: recent-file rows now show a colored file-type badge,
+  filename, and parent directory (instead of one long path string); a
+  dismissible one-time banner (macOS only) explains the .xml
+  double-click-association limitation and links to a guided, interactive
+  setup dialog with a "Reveal a Session File in Finder" shortcut, replacing
+  a static Help-menu wall of text; the real IGV-X app icon replaces a
+  placeholder stock-IGV image.
+
+Commit `67f33c8d4`.
+
 ## 4. Navigation and interaction
 
 ### 4.0 Arabidopsis (TAIR10) gene lists (commit `d422f0f29`)
@@ -192,6 +304,43 @@ hung (e.g. OneDrive cloud placeholders), the wait cursor spun forever and
 overlay repaint (no track loads), and the async repaint path has a 60-second
 `orTimeout` watchdog that releases the wait cursor and resets `isLoading`
 (load continues in background; data appears when it arrives).
+
+### 4.9 Bookmark next/previous navigation (commit `67f33c8d4`)
+
+Regions > **Next Bookmark** / **Previous Bookmark** (Shift+Cmd+] / Shift+Cmd+[
+— deliberately not the plain Cmd+]/[ that GlobalKeyDispatcher already uses
+for locus back/forward history) cycles through all bookmarks in the current
+session, ordered by chromosome (genome order) then start position, wrapping
+around at either end. Stock IGV has no bookmark-cycling shortcut at all.
+
+### 4.10 Find Track... (commit `67f33c8d4`)
+
+Tracks > **Find Track...** prompts for a name substring and highlights
+every track whose name contains it (case-insensitive), reusing the
+existing multi-track-selection highlight rather than introducing a second
+visual style. Useful for locating one track among hundreds of
+similarly-named ones — the exact WGBS-session scenario this fork targets.
+Distinct from the pre-existing **Filter Tracks...** (attribute-value-based,
+hides non-matches) — Find Track never hides anything.
+
+### 4.11 Copy Image to Clipboard (commit `67f33c8d4`)
+
+File > **Copy Image to Clipboard** renders the current view directly onto
+the system clipboard as an image — paste straight into
+Slides/Keynote/Word/Slack without saving a file first. Deliberately
+independent of the PNG/SVG/PDF export pipeline (§5): a plain
+screen-resolution raster via `Component.printAll`, not the DPI-scaled,
+publication-mode-aware export path, since a clipboard paste doesn't need
+either.
+
+### 4.12 Undo/Redo + Track History (commits `5a947ee40`, `125fe64d7`)
+
+Edit menu gains **Undo** (Cmd/Ctrl+Z) and **Redo** (Cmd/Ctrl+Shift+Z) across
+track-list mutations: add/remove, drag reorder, overlay merge/unmerge,
+rename, recolor, height change, sort, group-by, and genome loads. **Track
+History...** lists the last 100 operations and jumps to any point in
+history; the log persists in the `.igvx.json` companion. Stock IGV has no
+undo mechanism for track-list edits at all.
 
 ## 5. High-quality export
 
@@ -275,6 +424,54 @@ on every exit path (Cmd+Q, File → Exit, red button).
   (`setLabelFor`). (Commit `7c91b16ab`.)
 - Track-name panel and Diagnose report area have accessible identities.
 
+### 7.5 Bundled Arabidopsis (TAIR10) genome (commit `d09316511`)
+
+Stock IGV requires downloading a genome before you can view anything.
+IGV-X bundles the Arabidopsis TAIR10 genome in the app itself: it's
+extracted and registered automatically on first launch, so opening a WGBS
+session against TAIR10 works with zero setup. Pairs with the curated
+TAIR10 gene lists (§4.0).
+
+### 7.6 Native jpackage launcher + Finder session-file association (commits `d9ab77001`, `74f79c9e1`, `166efd284`, `d3fcc9067`)
+
+Stock IGV's macOS distribution used a shell-script launcher, which meant
+the JVM process registered with macOS LaunchServices under the *JDK's*
+bundle id, not IGV's own — so Finder "Open With" / double-click AppleEvents
+for a session file never reached the running app at all. IGV-X switched
+release packaging to `jpackage`, producing a native Mach-O launcher that
+registers as `org.igvx.IGVX`, and:
+
+- Declares an owned `org.igvx.session` UTI (extensions `.igvx`, `.session`,
+  `.session.txt`, `.idxsession`, `.idxsession.txt`) that opens on
+  double-click with zero setup.
+- Registers as an **Alternate** handler for the shared `public.xml` UTI, so
+  standard `.xml` IGV sessions show up in Finder's right-click "Open With"
+  menu (a one-time "Change All..." in Get Info makes double-click work for
+  `.xml` too, since macOS never lets an app silently take over a file type
+  shared with every other XML-reading app — Help > "Open IGV Session Files
+  in IGV-X..." and the Welcome-panel banner (§3.14) walk through it).
+- Installs the AppleEvents open-file handler on the EDT with a buffered
+  drain, so a cold-launch Finder event isn't lost while the app is still
+  starting up.
+- The jpackage `Info.plist` patch step is self-verifying: an earlier bug
+  had `PlistBuddy Set` silently no-op on a freshly-generated, empty
+  document-types array, shipping releases with no Finder association at
+  all until this was caught and fixed with fail-fast verification
+  (commit `d3fcc9067`) — releases now fail the build rather than ship
+  silently broken.
+
+Stock IGV does not integrate with Finder file associations at all on
+macOS.
+
+### 7.7 In-app update checking (commits `2c405193a`, `7ed7c33d4`, `cea09e235`)
+
+Help > **Check for Updates** and a startup check against this repository's
+GitHub releases feed (never any other source). First run prompts for a
+check frequency (Daily / Weekly / Never); checks are silent when already
+current and only surface a dialog when a newer version is actually
+available. Stock IGV has no update-checking mechanism at all in the
+desktop app.
+
 ## 8. Reproducible packaging
 
 `scripts/package/build_release.sh` (commit `32f84d59e`) produces a
@@ -310,5 +507,5 @@ certificate + Apple credentials; see `docs/release.md`).
 
 ---
 
-*Last updated 2026-08-10. The authoritative live list of commits is
-`fork-diff.md`; this document is updated alongside it.*
+*Last updated 2026-09-08 (release v2.19.5-igvx.4). The authoritative live
+list of commits is `fork-diff.md`; this document is updated alongside it.*

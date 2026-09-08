@@ -26,7 +26,7 @@ preferences, caches, and logs).
 
 - **Undo/Redo + Track History**: Edit > Undo (Cmd/Ctrl+Z) / Redo (Cmd/Ctrl+Shift+Z)
   across track mutations (add/remove, reorder, overlay merge, rename, recolor,
-  height, sort, group), plus a Track History dialog; history persists in the
+  height, sort, group) and genome loads, plus a Track History dialog; history persists in the
   `.igvx.json` companion.
 - **Save without re-prompting**: File > Save Session writes straight back to the
   session's own path; Save As... only when you want a new location.
@@ -50,6 +50,22 @@ preferences, caches, and logs).
 - **Drag-and-drop anywhere on the window**: dropping a file used to only work if dropped directly onto an
   existing track's data panel; it now works over the header/name panels and empty window space too, routed
   through the same session-vs-track auto-detection as File > Open.
+- **Move Session + Data Files Into Folder...** (File menu): copies the session and every local file it
+  references (including index/coverage/mapping companions) into one chosen folder, with paths made relative
+  to that folder — turns a session with tracks scattered across several directories into one portable,
+  zippable bundle. Filename collisions are disambiguated automatically. This is a copy, not a move — the
+  currently open session's identity never changes; a completion dialog can switch to the new bundle on request.
+- **Reveal in Finder** (macOS): track context menu gets "Reveal Data File(s) in Finder"; File menu gets
+  "Show Session in Finder".
+- **Remove from Recent**: right-click a Welcome-panel Recent Files/Sessions row to drop a single stale entry,
+  instead of only "Clear Recent Files".
+- **File-changed-on-disk warnings**: opening a session warns (non-blocking) if a resource file's recorded
+  mtime differs from its current one; saving over an existing session file warns if the file itself changed
+  on disk since it was opened (hand edit, git checkout, a cloud-sync conflict copy) before overwriting it.
+- Session save correctness: `Track/@id` and `index`/`coverage`/`mapping` attributes are now actually
+  relativized (they previously stayed absolute even with relative paths turned on — only `Resource/@path`
+  was correct before), a merged/combined track's member tracks get the same fix, and relative-path
+  computation is robust to a symlinked directory (e.g. an iCloud Drive-backed Desktop/Documents folder).
 
 ## Navigation & region selection
 
@@ -64,6 +80,12 @@ preferences, caches, and logs).
   in the data panel, not just the track-name panel.
 - **Configurable default quantitative-track range**: set e.g. min -5 / max 100 in Preferences → Tracks;
   blank = autoscale.
+- **Bookmark next/previous navigation**: Regions > Next/Previous Bookmark (Shift+Cmd+]/[) cycles through
+  bookmarks ordered by chromosome then position, wrapping around.
+- **Find Track...** (Tracks menu): highlights every track whose name contains a given substring, for locating
+  one track among hundreds of similarly-named ones — distinct from Filter Tracks, which hides non-matches.
+- **Copy Image to Clipboard** (File menu): paste the current view directly into Slides/Keynote/Word without
+  saving a file first.
 
 ## Batch track import
 
@@ -113,6 +135,14 @@ preferences, caches, and logs).
 - **Window state remembered**: exiting maximized re-launches maximized; normal bounds restored sanely.
 - **Accessibility**: VoiceOver names on command-bar buttons, Preferences dialog labels, track panel, and
   diagnose report.
+- **Bundled Arabidopsis (TAIR10) genome**: extracted and registered automatically on first launch — no
+  download needed before viewing a TAIR10-based session.
+- **Native jpackage launcher**: registers with macOS as `org.igvx.IGVX` so Finder "Open With"/double-click
+  AppleEvents actually reach the running app (stock IGV's shell-script launcher never received them at all).
+- **In-app update checks**: Help > Check for Updates, plus an optional startup check (Daily/Weekly/Never)
+  against this repo's GitHub releases — silent when already current.
+- **Welcome panel redesign**: recent-file rows show a colored file-type badge, filename, and parent directory
+  instead of one long path string; the real IGV-X app icon replaces a placeholder.
 - **Reproducible packaging**: `scripts/package/build_release.sh` produces the app + DMG + ZIP + SHA256SUMS
   (see `release.md`).
 
