@@ -88,6 +88,24 @@ public class SaveSessionMenuAction extends MenuAction {
                 && !parentDir.equals(DirectoryManager.getAutosaveDirectory());
         if (hasRealPath) {
             sessionFile = new File(currentSessionFilePath);
+
+            // IGV-X: this is the silent (no file chooser) overwrite path -- the
+            // one case where the user never sees a native "replace this file?"
+            // prompt. Warn if the file changed on disk since IGV-X last loaded
+            // or saved it (hand edit, git checkout, a cloud-sync conflict copy,
+            // etc), so a silent save can't clobber it without at least asking.
+            long expected = igv.getLastKnownSessionFileMtime();
+            if (expected != 0 && sessionFile.exists() && sessionFile.lastModified() != expected) {
+                int choice = JOptionPane.showConfirmDialog(igv.getMainFrame(),
+                        "This session file changed on disk since it was opened " +
+                                "(edited elsewhere, or a sync conflict copy).\n\n" +
+                                "Overwrite it anyway?",
+                        "Session File Changed", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    igv.resetStatusMessage();
+                    return;
+                }
+            }
         } else {
             // Get the parent dir of the session file so we can check if it's in the autosave directory
 

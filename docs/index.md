@@ -15,6 +15,7 @@ project docs.
 - **[upstream-update.md](upstream-update.md)** — the mandatory safe upstream merge workflow.
 - **[release.md](release.md)** — macOS packaging, versioning, signing/notarization, checksums, release checklist.
 - **[limitations.md](limitations.md)** — honest current limitations.
+- **[roadmap-ideas.md](roadmap-ideas.md)** — unscoped brainstorm of ~200 further improvement ideas (2026-09-07), grouped by area, nothing committed to.
 - **[fork-diff.md](fork-diff.md)** — machine-readable patch list vs upstream.
 - **[changes-vs-igv.md](changes-vs-igv.md)** — **complete detailed record of every IGV-X change vs stock IGV** (the doc that answers "what's different?").
 - **[whats-different.md](whats-different.md)** — user-facing "what's different in IGV-X?".

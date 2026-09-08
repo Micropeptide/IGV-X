@@ -470,6 +470,28 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         JMenuItem saveSessionItem = MenuAndToolbarUtils.createMenuItem(menuAction);
         menuItems.add(saveSessionItem);
 
+        if (Globals.IS_MAC) {
+            JMenuItem showInFinderItem = new JMenuItem("Show Session in Finder");
+            showInFinderItem.setToolTipText("Reveal the current session's .xml file in Finder");
+            showInFinderItem.addActionListener(e -> {
+                String path = igv.getSession().getPath();
+                if (path == null) {
+                    MessageUtils.showMessage("This session hasn't been saved yet.");
+                    return;
+                }
+                try {
+                    new ProcessBuilder("open", "-R", path).start();
+                } catch (java.io.IOException ex) {
+                    log.warn("Could not reveal session in Finder", ex);
+                }
+            });
+            menuItems.add(showInFinderItem);
+        }
+
+        menuAction = new org.broad.igv.ui.action.MoveSessionToFolderMenuAction("Move Session + Data Files Into Folder...", -1, igv);
+        menuAction.setToolTipText("Copy this session and every local data file it uses into one folder, with relative paths -- for a portable, movable bundle");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         menuAction = new ReloadSessionMenuAction("Reload Session", -1, igv);
         menuAction.setToolTipText(RELOAD_SESSION_TOOLTIP);
         reloadSessionItem = MenuAndToolbarUtils.createMenuItem(menuAction);
@@ -500,6 +522,17 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
                 };
 
         menuAction.setToolTipText(SAVE_PNG_IMAGE_TOOLTIP);
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
+        // IGV-X: quick paste-into-Slides/Keynote/Word during a lab meeting,
+        // no intermediate file.
+        menuAction = new MenuAction("Copy Image to Clipboard", null, -1) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                org.broad.igv.ui.util.ClipboardImageUtils.copyComponentToClipboard(igv.getMainPanel());
+            }
+        };
+        menuAction.setToolTipText("Copy the current view as an image, ready to paste elsewhere");
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
         menuAction =
@@ -695,6 +728,16 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         filterTracksAction.setToolTipText(UIConstants.FILTER_TRACKS_TOOLTIP);
         menuItems.add(MenuAndToolbarUtils.createMenuItem(filterTracksAction));
 
+        // IGV-X: name-substring search that highlights matches (via the existing
+        // multi-track-selection highlight) instead of hiding non-matches like
+        // Filter Tracks does -- useful for finding a track by name among
+        // hundreds of similarly-named ones (e.g. WGBS sessions) without losing
+        // the rest of the view.
+        JMenuItem findTrackItem = new JMenuItem("Find Track...");
+        findTrackItem.setToolTipText("Highlight tracks whose name contains the given text");
+        findTrackItem.addActionListener(e -> doFindTrack());
+        menuItems.add(findTrackItem);
+
         // Rename tracks
         menuAction = new RenameTracksMenuAction("Rename Tracks... ", KeyEvent.VK_R, IGV.getInstance());
         menuAction.setToolTipText(UIConstants.RENAME_TRACKS_TOOLTIP);
@@ -737,6 +780,35 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         return MenuAndToolbarUtils.createMenu(menuItems, dataMenuAction);
     }
 
+    /**
+     * IGV-X: prompt for a name substring and highlight every track whose name
+     * contains it (case-insensitive), replacing whatever was selected before.
+     * Uses Track.setSelected so it reuses the existing multi-track-selection
+     * highlight rendering rather than introducing a second visual style.
+     */
+    private void doFindTrack() {
+        String query = JOptionPane.showInputDialog(igv.getMainFrame(),
+                "Find tracks whose name contains:", "Find Track", JOptionPane.PLAIN_MESSAGE);
+        if (query == null || query.isBlank()) {
+            return;
+        }
+        String needle = query.toLowerCase();
+        List<Track> allTracks = igv.getAllTracks();
+        int matches = 0;
+        for (Track t : allTracks) {
+            boolean isMatch = t.getName() != null && t.getName().toLowerCase().contains(needle);
+            t.setSelected(isMatch);
+            if (isMatch) {
+                matches++;
+            }
+        }
+        igv.repaint();
+        if (matches == 0) {
+            MessageUtils.showMessage("No tracks match \"" + query + "\".");
+        } else {
+            igv.setStatusBarMessage(matches + " track(s) matching \"" + query + "\" highlighted");
+        }
+    }
 
     private JMenu createViewMenu() {
 
@@ -917,6 +989,32 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         menuAction.setToolTipText("Manage, jump to, highlight, and delete bookmarks");
         menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
 
+        // IGV-X: cycle through bookmarks without opening the manager dialog,
+        // ordered by chromosome (genome order) then position; wraps around.
+        menuAction = new MenuAction("Next Bookmark", null, -1) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                navigateBookmarks(true);
+            }
+        };
+        // Shift+Cmd+] rather than the plain Cmd+] GlobalKeyDispatcher already
+        // uses for locus back/forward history (a different kind of "next").
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        menuAction.setToolTipText("Jump to the next bookmark");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
+        menuAction = new MenuAction("Previous Bookmark", null, -1) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                navigateBookmarks(false);
+            }
+        };
+        menuAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        menuAction.setToolTipText("Jump to the previous bookmark");
+        menuItems.add(MenuAndToolbarUtils.createMenuItem(menuAction));
+
         menuAction =
                 new MenuAction("Gene Lists...", null, KeyEvent.VK_S) {
                     @Override
@@ -949,6 +1047,76 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
         MenuAction dataMenuAction = new MenuAction("Regions", null, KeyEvent.VK_V);
         viewMenu = MenuAndToolbarUtils.createMenu(menuItems, dataMenuAction);
         return viewMenu;
+    }
+
+    /**
+     * Index of {@code chr} within {@code chrOrder}, or {@code chrOrder.size()}
+     * (sorts after every resolvable chromosome, consistently) if it isn't
+     * found -- e.g. an alt contig or a naming mismatch with the genome's own
+     * chromosome list.
+     */
+    private static int chrIndexOrLast(List<String> chrOrder, String chr) {
+        int idx = chrOrder.indexOf(chr);
+        return idx < 0 ? chrOrder.size() : idx;
+    }
+
+    /**
+     * IGV-X: jump to the next/previous bookmark, ordered by chromosome
+     * (current genome's order) then start position, wrapping around at
+     * either end.
+     */
+    private void navigateBookmarks(boolean forward) {
+        java.util.Collection<org.broad.igv.feature.Bookmark> bookmarks = igv.getSession().getAllBookmarks();
+        if (bookmarks == null || bookmarks.isEmpty()) {
+            MessageUtils.showMessage("No bookmarks yet. Use Regions > Add Bookmark.");
+            return;
+        }
+
+        Genome genome = GenomeManager.getInstance().getCurrentGenome();
+        List<String> chrOrder = genome != null ? genome.getChromosomeNames() : java.util.Collections.emptyList();
+
+        List<org.broad.igv.feature.Bookmark> sorted = new ArrayList<>(bookmarks);
+        sorted.sort(java.util.Comparator
+                .comparingInt((org.broad.igv.feature.Bookmark b) -> chrIndexOrLast(chrOrder, b.getChr()))
+                .thenComparingInt(org.broad.igv.feature.Bookmark::getStart));
+
+        ReferenceFrame frame = FrameManager.getDefaultFrame();
+        String curChr = frame.getChrName();
+        double curCenter = frame.getCenter();
+        // Normalize an unresolvable chromosome (alt contig, naming mismatch)
+        // the same way the sort key above does -- "sorts last" -- so an
+        // unresolvable current chromosome doesn't make bIdx > curChrIdx true
+        // for nearly every bookmark (which happened when curChrIdx was left
+        // at indexOf's -1) and silently jump to the first bookmark in the
+        // session regardless of the requested direction.
+        int curChrIdx = chrIndexOrLast(chrOrder, curChr);
+
+        org.broad.igv.feature.Bookmark target = null;
+        if (forward) {
+            for (org.broad.igv.feature.Bookmark b : sorted) {
+                int bIdx = chrIndexOrLast(chrOrder, b.getChr());
+                if (bIdx > curChrIdx || (bIdx == curChrIdx && b.getStart() > curCenter)) {
+                    target = b;
+                    break;
+                }
+            }
+            if (target == null) {
+                target = sorted.get(0);
+            }
+        } else {
+            for (int i = sorted.size() - 1; i >= 0; i--) {
+                org.broad.igv.feature.Bookmark b = sorted.get(i);
+                int bIdx = chrIndexOrLast(chrOrder, b.getChr());
+                if (bIdx < curChrIdx || (bIdx == curChrIdx && b.getStart() < curCenter)) {
+                    target = b;
+                    break;
+                }
+            }
+            if (target == null) {
+                target = sorted.get(sorted.size() - 1);
+            }
+        }
+        frame.jumpTo(target.getChr(), target.getStart(), target.getEnd());
     }
 
     private JMenu createHelpMenu() {
@@ -1050,23 +1218,10 @@ public class IGVMenuBar extends JMenuBar implements IGVEventObserver {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        JOptionPane.showMessageDialog(igv.getMainFrame(),
-                                "IGV-X now registers IGV session files with macOS.\n" +
-                                        "\n" +
-                                        "• IGV-X session files (.igvx, .session, .session.txt, .idxsession) " +
-                                        "open in IGV-X automatically when double-clicked.\n" +
-                                        "• Standard IGV sessions (.xml) can be opened from the Finder " +
-                                        "right-click menu: Open With > IGV-X.\n" +
-                                        "\n" +
-                                        "To make ALL .xml session files open in IGV-X by default:\n" +
-                                        "  1. In Finder, right-click any IGV session (.xml) file.\n" +
-                                        "  2. Choose Get Info.\n" +
-                                        "  3. Under 'Open with', choose IGV-X.\n" +
-                                        "  4. Click 'Change All...' and confirm.\n" +
-                                        "\n" +
-                                        "You only need to do this once; afterwards double-clicking " +
-                                        "a session opens it in IGV-X.",
-                                "Open IGV Session Files in IGV-X", JOptionPane.INFORMATION_MESSAGE);
+                        String sample = igv.getRecentSessionList().stream()
+                                .filter(p -> p.toLowerCase().endsWith(".xml"))
+                                .findFirst().orElse(null);
+                        org.broad.igv.ui.util.FileAssociationHelper.showGuide(igv.getMainFrame(), sample);
                     }
                 };
         menuAction.setToolTipText("How to open IGV session files by double-clicking them in the Finder");

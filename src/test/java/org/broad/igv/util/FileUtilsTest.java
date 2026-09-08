@@ -26,9 +26,12 @@
 package org.broad.igv.util;
 
 import org.junit.Test;
+import org.junit.Assume;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -65,6 +68,51 @@ public class FileUtilsTest {
         assertEquals("stuff/xyz.dat", FileUtils.getRelativePath("/var/data/", "/var/data/stuff/xyz.dat",  "/"));
         assertEquals("../../b/c", FileUtils.getRelativePath( "/a/x/y/","/a/b/c", "/"));
         assertEquals("../../b/c", FileUtils.getRelativePath( "/m/n/o/a/x/y/", "/m/n/o/a/b/c", "/"));
+    }
+
+    /**
+     * IGV-X regression test: a session saved next to its data file must come out
+     * relative even when the session's own path reaches the shared directory
+     * through a symlink (e.g. a real Mac's ~/Desktop or ~/Documents under iCloud
+     * Drive) while the data file's path was resolved directly, or vice versa.
+     * Before the fix, {@code FileUtils.getRelativePath} compared the two raw
+     * (non-canonicalized) absolute paths textually; a symlink on either side means
+     * they share no common path element, and the method falls back to returning
+     * the target's absolute path -- exactly the "session still has absolute paths
+     * after Save" bug report this guards against.
+     */
+    @Test
+    public void testGetRelativePathThroughSymlink() throws IOException {
+        Path realDir = Files.createTempDirectory("igvx-relpath-real-");
+        Path linkDir = realDir.getParent().resolve("igvx-relpath-link-" + System.nanoTime());
+        try {
+            Files.createSymbolicLink(linkDir, realDir);
+        } catch (IOException | UnsupportedOperationException e) {
+            // Some CI/sandbox environments (or Windows without the privilege) can't
+            // create symlinks; the fix is inert but harmless there, so skip rather
+            // than fail.
+            Assume.assumeNoException("Symlinks not supported in this environment", e);
+            return;
+        }
+        try {
+            File dataFile = new File(realDir.toFile(), "data.bw");
+            dataFile.createNewFile();
+
+            // Session path resolved through the symlink; data file resolved directly.
+            File sessionViaLink = new File(linkDir.toFile(), "session.xml");
+            String rel = FileUtils.getRelativePath(sessionViaLink.getAbsolutePath(), dataFile.getAbsolutePath());
+            assertEquals("Session reached via symlink, data file direct", "data.bw", rel);
+
+            // The reverse: data file resolved through the symlink, session direct.
+            File sessionDirect = new File(realDir.toFile(), "session.xml");
+            File dataViaLink = new File(linkDir.toFile(), "data.bw");
+            String rel2 = FileUtils.getRelativePath(sessionDirect.getAbsolutePath(), dataViaLink.getAbsolutePath());
+            assertEquals("Session direct, data file reached via symlink", "data.bw", rel2);
+        } finally {
+            Files.deleteIfExists(linkDir);
+            Files.deleteIfExists(realDir.resolve("data.bw"));
+            Files.deleteIfExists(realDir);
+        }
     }
 
     @Test

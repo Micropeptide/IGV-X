@@ -180,6 +180,38 @@ public class TrackMenuUtils {
                 DiagnoseDialog.showForTracks(org.broad.igv.ui.IGV.getInstance().getMainFrame(),
                         new java.util.ArrayList<>(tracks)));
         menu.add(diagnoseItem);
+
+        // IGV-X: quick way to find a track's underlying file(s) without hunting
+        // for it manually -- e.g. before using "Move Session + Data Files Into
+        // Folder..." or just to check where something actually lives on disk.
+        if (Globals.IS_MAC) {
+            java.util.List<String> revealPaths = new java.util.ArrayList<>();
+            for (Track t : tracks) {
+                org.broad.igv.util.ResourceLocator rl = t.getResourceLocator();
+                if (rl != null && rl.getPath() != null && !org.broad.igv.util.FileUtils.isRemote(rl.getPath())) {
+                    java.io.File f = new java.io.File(rl.getPath());
+                    if (f.exists()) {
+                        revealPaths.add(f.getAbsolutePath());
+                    }
+                }
+            }
+            if (!revealPaths.isEmpty()) {
+                boolean multiple = revealPaths.size() > 1;
+                JMenuItem revealItem = new JMenuItem("Reveal Data File" + (multiple ? "s" : "") + " in Finder");
+                revealItem.addActionListener(e -> {
+                    java.util.List<String> cmd = new java.util.ArrayList<>();
+                    cmd.add("open");
+                    cmd.add("-R");
+                    cmd.addAll(revealPaths);
+                    try {
+                        new ProcessBuilder(cmd).start();
+                    } catch (java.io.IOException ex) {
+                        log.warn("Could not reveal file(s) in Finder", ex);
+                    }
+                });
+                menu.add(revealItem);
+            }
+        }
         menu.addSeparator();
         if (dataTracksOnly) {
             addDataItems(menu, tracks, hasCoverageTracks);

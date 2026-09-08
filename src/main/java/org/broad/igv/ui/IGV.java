@@ -61,6 +61,7 @@ import org.broad.igv.sam.SortOption;
 import org.broad.igv.session.*;
 import org.broad.igv.session.autosave.AutosaveTimerTask;
 import org.broad.igv.session.autosave.SessionAutosaveManager;
+import org.broad.igv.ui.action.SmartOpenMenuAction;
 import org.broad.igv.track.*;
 import org.broad.igv.ui.WaitCursorManager.CursorToken;
 import org.broad.igv.ui.dnd.GhostGlassPane;
@@ -71,6 +72,12 @@ import org.broad.igv.variant.VariantTrack;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
@@ -179,6 +186,23 @@ public class IGV implements IGVEventObserver {
      */
     private volatile boolean sessionLoadCancelled = false;
     private volatile Thread sessionLoadThread = null;
+
+    /**
+     * IGV-X: the session file's last-modified time as of the last successful
+     * load or save, used by {@link org.broad.igv.ui.action.SaveSessionMenuAction}
+     * to warn before a silent (no-file-chooser) re-save would clobber a change
+     * made to the file by something else in the meantime (hand edit, git
+     * checkout, a sync conflict copy, etc). 0 means "unknown / not tracked".
+     */
+    private volatile long lastKnownSessionFileMtime = 0;
+
+    public long getLastKnownSessionFileMtime() {
+        return lastKnownSessionFileMtime;
+    }
+
+    public void setLastKnownSessionFileMtime(long mtime) {
+        this.lastKnownSessionFileMtime = mtime;
+    }
 
     public boolean isSessionLoadCancelled() {
         return sessionLoadCancelled;
@@ -307,6 +331,15 @@ public class IGV implements IGVEventObserver {
 
         rootPane.setContentPane(contentPane);
         rootPane.setJMenuBar(menuBar);
+
+        // IGV-X: accept Finder file drops anywhere in the main window (header/name
+        // panels, empty space before any track is loaded, etc). DataPanelContainer
+        // already has its own DropTarget for the track data area specifically; a
+        // drop there is handled by that more specific target first. This one is a
+        // window-wide fallback so dragging a file onto any other part of the
+        // window -- not just an existing track's data panel -- works too.
+        new DropTarget(contentPane, DnDConstants.ACTION_COPY_OR_MOVE, new WindowFileDropTargetListener());
+
         glassPane = rootPane.getGlassPane();
         glassPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         // consumeEvents(glassPane);
@@ -889,6 +922,37 @@ public class IGV implements IGVEventObserver {
 
     }
 
+    /**
+     * IGV-X: accepts files (and track-hub/session URLs) dropped anywhere on the
+     * main window, not just onto an existing track's data panel. Delegates to
+     * {@link SmartOpenMenuAction#openFiles} so a dropped session file loads as a
+     * session and a dropped track file loads as a track, exactly like File > Open.
+     */
+    private static class WindowFileDropTargetListener extends DropTargetAdapter {
+
+        @Override
+        public void drop(DropTargetDropEvent event) {
+            Transferable transferable = event.getTransferable();
+            if (!transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                event.rejectDrop();
+                return;
+            }
+            event.acceptDrop(DnDConstants.ACTION_COPY);
+            try {
+                @SuppressWarnings("unchecked")
+                List<File> files = (List<File>) transferable.getTransferData(DataFlavor.javaFileListFlavor);
+                if (files != null && !files.isEmpty()) {
+                    SmartOpenMenuAction.openFiles(IGV.getInstance(), files.toArray(new File[0]));
+                }
+                event.dropComplete(true);
+            } catch (Exception e) {
+                log.error("Error handling dropped file(s)", e);
+                MessageUtils.showMessage("Error opening dropped file(s): " + e.getMessage());
+                event.dropComplete(false);
+            }
+        }
+    }
+
     private void createDragAndDropCursor()
             throws HeadlessException, IndexOutOfBoundsException {
 
@@ -1225,9 +1289,40 @@ public class IGV implements IGVEventObserver {
 
         revalidateTrackPanels();
         setSessionModified(false);
+
+        // IGV-X: a loaded session's tracks are added directly to each TrackPanel
+        // by the session reader, bypassing addTracks(List<Track>) (which already
+        // hides the welcome panel for ordinary track loads) -- so without this,
+        // opening a session never dismissed the "Welcome to IGV-X" panel on its
+        // own (see the StartupRunnable race note above for the other half of
+        // this fix).
+        UIUtilities.invokeOnEventThread(() -> contentPane.showWelcomePanel(false));
+
         // IGV-X: auto-organize by genotype after a session load when enabled.
         javax.swing.SwingUtilities.invokeLater(() ->
                 org.broad.igv.organize.TrackOrganizer.autoOrganizeIfEnabled(this));
+
+        // IGV-X: best-effort warning if a resource file changed on disk since
+        // this session was last saved (e.g. silently reprocessed/regenerated
+        // upstream) -- never blocks or fails the load itself.
+        try {
+            List<String> changed = org.broad.igv.session.SessionMetadata.findChangedResources(sessionPath);
+            if (!changed.isEmpty()) {
+                StringBuilder msg = new StringBuilder("This session's data may be stale -- ")
+                        .append(changed.size()).append(" file(s) changed on disk since it was last saved:\n\n");
+                for (String c : changed) {
+                    msg.append("  ").append(c).append("\n");
+                }
+                UIUtilities.invokeOnEventThread(() -> MessageUtils.showMessage(msg.toString()));
+            }
+        } catch (Exception e) {
+            log.warn("IGV-X: changed-resource check failed", e);
+        }
+
+        if (sessionPath != null && !FileUtils.isRemote(sessionPath)) {
+            File sf = new File(sessionPath);
+            lastKnownSessionFileMtime = sf.exists() ? sf.lastModified() : 0;
+        }
         return true;
     }
 
@@ -1241,6 +1336,7 @@ public class IGV implements IGVEventObserver {
     public void saveSession(File targetFile) throws IOException {
         (new SessionWriter()).saveSession(session, targetFile);
         setSessionModified(false);
+        lastKnownSessionFileMtime = targetFile.lastModified();
 
         String sessionPath = targetFile.getAbsolutePath();
         session.setPath(sessionPath);
@@ -2345,8 +2441,15 @@ public class IGV implements IGVEventObserver {
 
                 // IGV-X: when nothing was explicitly loaded, show the welcome
                 // panel (recent files / sessions) instead of an empty viewer.
+                // Also check for a Finder/AppleEvents open-file request: it's
+                // handled as a separate, unordered async task on the same
+                // thread pool as this one (see DesktopIntegration), so without
+                // this check a Finder-delivered session could finish loading
+                // and hide the welcome panel, only for this code to then show
+                // it again over the already-loaded data.
                 if (!runningBatch && igvArgs.getSessionFile() == null
-                        && igvArgs.getDataFileStrings() == null && !loadAutosave) {
+                        && igvArgs.getDataFileStrings() == null && !loadAutosave
+                        && !DesktopIntegration.hasSeenOpenFileEvent()) {
                     UIUtilities.invokeOnEventThread(() -> contentPane.showWelcomePanel(true));
                 }
 

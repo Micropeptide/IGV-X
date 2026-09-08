@@ -98,6 +98,43 @@ public class SessionMetadataTest extends AbstractHeadlessTest {
     }
 
     @Test
+    public void testFindChangedResourcesDetectsModifiedFile() throws Exception {
+        File dir = Files.createTempDirectory("igvx-session-meta").toFile().getCanonicalFile();
+        dir.deleteOnExit();
+        File sessionFile = new File(dir, "mtime.session.xml");
+        File dataFile = new File(dir, "data.bw");
+        Files.write(dataFile.toPath(), "v1".getBytes());
+
+        java.util.Map<String, Long> mtimes = new java.util.HashMap<>();
+        mtimes.put("data.bw", dataFile.lastModified());
+        SessionMetadata.write(sessionFile, "tair10", null, 1, Arrays.asList("data.bw"), true, null, mtimes);
+
+        assertTrue("Unchanged file should not be flagged",
+                SessionMetadata.findChangedResources(sessionFile.getAbsolutePath()).isEmpty());
+
+        // Backdate the recorded mtime so the (unmodified) file now looks newer
+        // than what was recorded -- simulating the file having been rewritten
+        // after the session was saved, without needing a real filesystem
+        // mtime-resolution wait.
+        mtimes.put("data.bw", dataFile.lastModified() - 60_000);
+        SessionMetadata.write(sessionFile, "tair10", null, 1, Arrays.asList("data.bw"), true, null, mtimes);
+
+        java.util.List<String> changed = SessionMetadata.findChangedResources(sessionFile.getAbsolutePath());
+        assertEquals(1, changed.size());
+        assertEquals("data.bw", changed.get(0));
+    }
+
+    @Test
+    public void testFindChangedResourcesEmptyWhenNoMtimesRecorded() throws Exception {
+        File dir = Files.createTempDirectory("igvx-session-meta").toFile();
+        dir.deleteOnExit();
+        File sessionFile = new File(dir, "nomtime.session.xml");
+        SessionMetadata.write(sessionFile, "tair10", null, 1, Arrays.asList("data.bw"), true);
+
+        assertTrue(SessionMetadata.findChangedResources(sessionFile.getAbsolutePath()).isEmpty());
+    }
+
+    @Test
     public void testWrongVersionReturnsNull() throws Exception {
         File dir = Files.createTempDirectory("igvx-session-meta").toFile();
         dir.deleteOnExit();

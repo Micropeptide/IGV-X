@@ -50,6 +50,8 @@ import org.broad.igv.util.Utilities;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import java.awt.Color;
 import javax.swing.*;
@@ -108,13 +110,25 @@ public class SessionWriter {
         // session file itself is the source of truth.
         try {
             List<String> resourcePaths = new ArrayList<>();
+            Map<String, Long> resourceMtimes = new LinkedHashMap<>();
             for (ResourceLocator rl : getResourceLocatorSet()) {
                 if (rl != null && rl.getPath() != null) {
-                    String p = rl.getPath();
-                    if (isUseRelative(outputFile)) {
-                        p = FileUtils.getRelativePath(outputFile.getAbsolutePath(), p);
+                    String rawPath = rl.getPath();
+                    String p = rawPath;
+                    if (isUseRelative(outputFile) && !FileUtils.isRemote(rawPath)) {
+                        p = FileUtils.getRelativePath(outputFile.getAbsolutePath(), rawPath);
                     }
                     resourcePaths.add(p);
+                    // IGV-X: record this resource's current mtime (keyed the same
+                    // way it was just written above) so a later load can warn if
+                    // the underlying file changed since this save -- e.g. it was
+                    // silently reprocessed/regenerated upstream.
+                    if (!FileUtils.isRemote(rawPath)) {
+                        File f = new File(rawPath);
+                        if (f.isAbsolute() && f.exists()) {
+                            resourceMtimes.put(p, f.lastModified());
+                        }
+                    }
                 }
             }
             SessionMetadata.write(outputFile,
@@ -123,7 +137,8 @@ public class SessionWriter {
                     getResourceLocatorSet().size(),
                     resourcePaths,
                     isUseRelative(outputFile),
-                    IGV.hasInstance() ? IGV.getInstance().getTrackHistory().toJson() : null);
+                    IGV.hasInstance() ? IGV.getInstance().getTrackHistory().toJson() : null,
+                    resourceMtimes);
         } catch (Exception e) {
             log.warn("IGV-X: companion metadata write failed", e);
         }
@@ -368,10 +383,7 @@ public class SessionWriter {
                     //RESOURCE ELEMENT
                     Element dataFileElement = document.createElement(SessionElement.RESOURCE);
 
-                    String resourcePath = resourceLocator.getPath();
-                    if (isUseRelative(outputFile)) {
-                        resourcePath = FileUtils.getRelativePath(outputFile.getAbsolutePath(), resourcePath);
-                    }
+                    String resourcePath = relativizeIfApplicable(outputFile, resourceLocator.getPath());
                     dataFileElement.setAttribute(SessionAttribute.PATH, resourcePath);
 
                     //OPTIONAL ATTRIBUTES
@@ -394,13 +406,13 @@ public class SessionWriter {
                         dataFileElement.setAttribute(SessionAttribute.TYPE, resourceLocator.format);
                     }
                     if (resourceLocator.getIndexPath() != null) {
-                        dataFileElement.setAttribute(SessionAttribute.INDEX, resourceLocator.getIndexPath());
+                        dataFileElement.setAttribute(SessionAttribute.INDEX, relativizeIfApplicable(outputFile, resourceLocator.getIndexPath()));
                     }
                     if (resourceLocator.getCoverage() != null) {
-                        dataFileElement.setAttribute(SessionAttribute.COVERAGE, resourceLocator.getCoverage());
+                        dataFileElement.setAttribute(SessionAttribute.COVERAGE, relativizeIfApplicable(outputFile, resourceLocator.getCoverage()));
                     }
                     if (resourceLocator.getMappingPath() != null) {
-                        dataFileElement.setAttribute(SessionAttribute.MAPPING, resourceLocator.getMappingPath());
+                        dataFileElement.setAttribute(SessionAttribute.MAPPING, relativizeIfApplicable(outputFile, resourceLocator.getMappingPath()));
                     }
                     if (resourceLocator.getTrackLine() != null) {
                         dataFileElement.setAttribute(SessionAttribute.TRACK_LINE, resourceLocator.getTrackLine());
@@ -415,6 +427,46 @@ public class SessionWriter {
     private boolean isUseRelative(File outputFile) {
         return outputFile != null &&
                 PreferencesManager.getPreferences().getAsBoolean(Constants.SESSION_RELATIVE_PATH);
+    }
+
+    /**
+     * IGV-X: the single "should this path be relativized, and if so how"
+     * check shared by every path-bearing session attribute this writer emits
+     * (Resource/@path, Track/@id -- including nested Track elements inside a
+     * merged/combined track -- and index/coverage/mapping). Having one
+     * shared method means an edge case discovered for one of them (the "."
+     * coverage/mapping sentinel, a non-path track id like the synthetic
+     * "Reference sequence" track, a remote URL) is automatically handled for
+     * all the others too, instead of each call site needing its own,
+     * separately-maintained copy of the same guards.
+     */
+    private String relativizeIfApplicable(File outputFile, String path) {
+        if (path == null || path.equals(".") || FileUtils.isRemote(path) || !new File(path).isAbsolute()) {
+            return path;
+        }
+        return isUseRelative(outputFile) ? FileUtils.getRelativePath(outputFile.getAbsolutePath(), path) : path;
+    }
+
+    /**
+     * Recursively relativize the "id" attribute of any nested &lt;Track&gt;
+     * child elements (e.g. a MergedTracks' member tracks), which
+     * {@link org.broad.igv.track.Track#marshalXML} writes as an absolute
+     * path with no way to relativize it itself (it has no output-file
+     * context).
+     */
+    private void relativizeNestedTrackIds(Element trackElement, File outputFile) {
+        NodeList children = trackElement.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child instanceof Element && "Track".equals(child.getNodeName())) {
+                Element childElement = (Element) child;
+                String childId = childElement.getAttribute("id");
+                if (childId != null && !childId.isEmpty()) {
+                    childElement.setAttribute("id", relativizeIfApplicable(outputFile, childId));
+                }
+                relativizeNestedTrackIds(childElement, outputFile);
+            }
+        }
     }
 
     private void writePanels(Element globalElement, Document document) throws DOMException {
@@ -436,13 +488,26 @@ public class SessionWriter {
                     Element element = document.createElement("Track");
                     element.setAttribute("clazz", SessionElement.getXMLClassName(track.getClass()));
 
-                    String id = track.getId();
-                    if (isUseRelative(outputFile) && !FileUtils.isRemote(id)) {
-                        id = FileUtils.getRelativePath(outputFile.getAbsolutePath(), id);
-                    }
+                    String id = relativizeIfApplicable(outputFile, track.getId());
+
+                    // IGV-X: marshalXML (below) unconditionally re-sets "id" from the
+                    // track's own raw (always-absolute) id field, which clobbers the
+                    // relative id computed above. Set it again afterward so the
+                    // relative path actually survives into the written XML -- this
+                    // was silently defeating relative-path saves for every track's
+                    // Track/@id (the Resource/@path attribute has no such collision
+                    // and was already correct).
+                    element.setAttribute("id", id);
+                    track.marshalXML(document, element);
                     element.setAttribute("id", id);
 
-                    track.marshalXML(document, element);
+                    // A merged/combined track (MergedTracks) marshals its member
+                    // tracks as nested <Track> child elements of its own, via the
+                    // same Track.marshalXML(Document, Element) that has no
+                    // output-file context to relativize against -- so their ids
+                    // come out absolute no matter what. Fix those up here, where
+                    // the output file IS known, exactly like the top-level id above.
+                    relativizeNestedTrackIds(element, outputFile);
 
                     if (track.isNumeric() && track.getDataRange() != null) {
                         Element dataRangeElement = document.createElement(SessionElement.DATA_RANGE);

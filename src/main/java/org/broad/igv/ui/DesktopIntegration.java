@@ -104,6 +104,27 @@ public class DesktopIntegration {
     private static volatile IGV igvReady = null;
 
     /**
+     * IGV-X: set the instant a Finder/AppleEvents open-file request is received
+     * (cold-launch buffered or live), and never cleared. {@code StartupRunnable}
+     * checks this before deciding to show the Welcome panel: the open-file
+     * request and normal startup both run as unordered async tasks on the same
+     * thread pool, and without this check {@code StartupRunnable} could show the
+     * Welcome panel *after* the Finder-requested session/tracks already loaded
+     * and hid it, leaving it stuck on top of the loaded data (Runtian bug
+     * report, 2026-09-07: "Open With" loads the session but shows the welcome
+     * page requiring a manual Dismiss).
+     */
+    private static volatile boolean sawOpenFileEvent = false;
+
+    /**
+     * Whether a Finder/AppleEvents open-file request has been received (or is
+     * still buffered) at any point in this process's lifetime.
+     */
+    public static boolean hasSeenOpenFileEvent() {
+        return sawOpenFileEvent;
+    }
+
+    /**
      * Install the macOS open-file handler as early as possible.  Safe to call
      * on any platform and multiple times (idempotent).  Call from Main.main
      * before heavy initialization so a cold-launch Finder event is not lost.
@@ -125,6 +146,7 @@ public class DesktopIntegration {
                     if (files == null || files.isEmpty()) {
                         return;
                     }
+                    sawOpenFileEvent = true;
                     IGV igv = igvReady;
                     if (igv != null) {
                         SmartOpenMenuAction.openFiles(igv, files.toArray(new File[0]));

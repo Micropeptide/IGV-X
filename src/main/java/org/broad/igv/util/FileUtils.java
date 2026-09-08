@@ -103,6 +103,23 @@ public class FileUtils {
     }
 
     /**
+     * IGV-X: best-effort symlink resolution for {@link #getRelativePath(String, String, String)}.
+     * Never throws and never touches anything that isn't a plain local path (remote
+     * URLs are returned unchanged); falls back to the original string on any error
+     * (nonexistent file, permission issue, etc).
+     */
+    private static String canonicalizeForRelativize(String path) {
+        if (path == null || path.isEmpty() || isRemote(path)) {
+            return path;
+        }
+        try {
+            return new File(path).getCanonicalPath();
+        } catch (IOException e) {
+            return path;
+        }
+    }
+
+    /**
      * Get the relative path from one file to another, specifying the directory separator.
      * If one of the provided resources does not exist, it is assumed to be a file unless it ends with '/' or
      * '\'.
@@ -113,6 +130,28 @@ public class FileUtils {
      * @return
      */
     public static String getRelativePath(String basePath, String targetPath, String pathSeparator) {
+
+        // Capture this before any canonicalization below can strip it (getCanonicalPath()
+        // never returns a trailing separator) -- it feeds the base-is-a-directory heuristic
+        // further down, which must see the caller's original intent.
+        boolean basePathHadTrailingSeparator = basePath != null && basePath.endsWith(pathSeparator);
+
+        // IGV-X: resolve symlinks in both paths before relativizing them. Without
+        // this, a session saved from (or a track loaded from) a path that traverses
+        // a symlink -- e.g. a Desktop/Documents folder under iCloud Drive, or a
+        // mapped network share -- can fail to find any common prefix with the
+        // other, non-symlinked path even though both point into the same real
+        // directory tree, silently falling back to an absolute path (see
+        // "no common path element" below). Canonicalizing first makes the two
+        // paths comparable regardless of which one traversed a symlink. Only safe
+        // when pathSeparator is this JVM's actual separator -- callers deliberately
+        // pass the other platform's separator to exercise cross-platform behavior
+        // with paths that aren't real paths on this host (e.g. testing "C:\..." on
+        // a Mac), and java.io.File must not be allowed to touch those.
+        if (pathSeparator.equals(FILE_SEP)) {
+            basePath = canonicalizeForRelativize(basePath);
+            targetPath = canonicalizeForRelativize(targetPath);
+        }
 
         // Normalize the paths
         String normalizedTargetPath = FilenameUtils.normalizeNoEndSeparator(targetPath);
@@ -169,7 +208,7 @@ public class FileUtils {
         if (baseResource.exists()) {
             baseIsFile = baseResource.isFile();
 
-        } else if (basePath.endsWith(pathSeparator)) {
+        } else if (basePathHadTrailingSeparator) {
             baseIsFile = false;
         }
 

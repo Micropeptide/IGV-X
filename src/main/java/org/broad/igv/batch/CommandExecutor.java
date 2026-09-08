@@ -44,9 +44,7 @@ import org.broad.igv.prefs.PreferencesManager;
 import org.broad.igv.renderer.DataRange;
 import org.broad.igv.sam.AlignmentTrack;
 import org.broad.igv.sam.SortOption;
-import org.broad.igv.session.Session;
 import org.broad.igv.session.SessionReader;
-import org.broad.igv.session.SessionWriter;
 import org.broad.igv.track.*;
 import org.broad.igv.ui.IGV;
 import org.broad.igv.ui.action.OverlayTracksMenuAction;
@@ -1172,15 +1170,21 @@ public class CommandExecutor {
     }
 
     private String saveSession(String filename) {
-        Session currentSession = igv.getSession();
         if (!filename.endsWith(".xml")) {
             filename = filename + ".xml";
         }
         File targetFile = getFile(filename);
         if (targetFile.getParentFile().exists()) {
-            currentSession.setPath(targetFile.getAbsolutePath());
             try {
-                (new SessionWriter()).saveSession(currentSession, targetFile);
+                // IGV-X: go through IGV.saveSession(File) rather than a raw
+                // SessionWriter -- besides writing the file, it keeps
+                // lastKnownSessionFileMtime in sync (used by the interactive
+                // Save Session's "file changed on disk" guard). Writing
+                // directly here left that mtime stale, so the next
+                // interactive save would spuriously warn that the file
+                // "changed on disk" when it was really just this batch
+                // command that wrote it.
+                igv.saveSession(targetFile);
                 return "OK";
             } catch (Exception e) {
                 return "Error writingin sesssion: " + e.getMessage();

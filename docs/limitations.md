@@ -32,10 +32,30 @@ partially. Updated as features land; do not let this file go stale.
 
 ## 3. Sessions
 
-- **Implemented**: relative paths default on, `.igvx.json` companion
-  (optional; session loads if missing), bookmarks + region highlights
-  persist with the session, unified smart Open, unsaved-session close
-  confirmation. See `sessions.md`.
+- **Implemented**: relative paths default on (verified end-to-end
+  2026-09-07 — both `Resource/@path` and `Track/@id` are relative, and
+  robust to symlinked directories e.g. iCloud Drive-backed Desktop/
+  Documents), `.igvx.json` companion (optional; session loads if missing),
+  bookmarks + region highlights persist with the session, unified smart
+  Open, unsaved-session close confirmation. See `sessions.md`.
+- **Implemented**: Finder "Open in IGV-X" — double-click and right-click >
+  Open With both verified working against a locally-built app
+  (2026-09-07); the underlying jpackage plist-patching bug (commit
+  d3fcc9067) is confirmed fixed, not just patched at the script level.
+- **Implemented**: dropping a file anywhere on the main window (not just
+  the track data area) now loads it, same as File > Open.
+- **Implemented**: the Welcome panel no longer gets stuck on top of a
+  session loaded via Finder (double-click/Open With) — fixed a startup race
+  where it could be shown *after* the Finder-delivered session already
+  loaded (2026-09-07).
+- **Not fully automatable**: making IGV-X the double-click default for
+  plain `.xml` files still needs one manual Finder step (macOS doesn't let
+  any app silently take over a file type shared with every other XML
+  reader). What IGV-X *can* do — and now does — is make that one-time step
+  as low-friction as possible (a guided dialog with a "reveal the file in
+  Finder" button, surfaced from a dismissible Welcome-panel banner and from
+  Help). IGV-X's own extensions (`.igvx`, `.session`, `.idxsession`) already
+  need zero setup.
 
 ## 4. UI / interaction
 

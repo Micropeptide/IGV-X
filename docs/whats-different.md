@@ -35,14 +35,21 @@ preferences, caches, and logs).
 - **`.igvx.json` companion metadata** written next to saved sessions; optional — sessions load fine without it.
 - **Unified smart Open**: one File > Open dialog routes files vs sessions automatically.
 - **Unsaved-session close confirmation**: closing with unsaved changes asks first (all exit paths).
-- **Recent-files history + welcome panel**: every open path records history; double-click to reopen.
+- **Recent-files history + welcome panel**: every open path records history; double-click to reopen. Rows
+  show filename + a colored file-type badge + containing directory (dim, smaller) rather than one long raw
+  path. The panel now correctly disappears once a session opens via Finder ("Open With" or double-click),
+  not just via File > Open (see CHANGELOG "Fixed" for the race that used to leave it stuck on top).
 - **macOS Finder association (session files)**: IGV-X registers with LaunchServices so IGV session files
   (`.igvx`, `.session`, `.session.txt`, `.idxsession`, `.idxsession.txt`) open in IGV-X when double-clicked,
   and standard `.xml` sessions appear in the Finder right-click "Open With" menu (choose IGV-X once, then
-  "Change All…" to make `.xml` sessions open in IGV-X by default). Help > Open IGV Session Files in IGV-X…
-  shows the one-time steps. IGV-X keeps its own bundle id (`org.igvx.IGVX`) and never conflicts with a
-  stock IGV install.
+  "Change All…" to make `.xml` sessions open in IGV-X by default). A dismissible banner on the welcome
+  panel, and Help > Open IGV Session Files in IGV-X…, both open a guided dialog with a "Reveal a Session
+  File in Finder" button so the one-time step doesn't require hunting for a file to right-click. IGV-X keeps
+  its own bundle id (`org.igvx.IGVX`) and never conflicts with a stock IGV install.
 - **Persistent bookmarks + region highlights**: saved with the session, per-region colors. Saving a bookmark no longer blocks the UI — it uses a lightweight repaint, and a 60-second watchdog releases the wait cursor if any track load genuinely hangs (e.g. OneDrive cloud placeholders), so the cursor can never spin forever.
+- **Drag-and-drop anywhere on the window**: dropping a file used to only work if dropped directly onto an
+  existing track's data panel; it now works over the header/name panels and empty window space too, routed
+  through the same session-vs-track auto-detection as File > Open.
 
 ## Navigation & region selection
 

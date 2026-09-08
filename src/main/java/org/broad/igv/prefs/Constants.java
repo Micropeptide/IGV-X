@@ -91,6 +91,10 @@ final public class Constants {
     // IGV-X: horizontal swipe / trackpad panning
     public static final String SWIPE_PAN_ENABLED = "IGVX.SWIPE_PAN_ENABLED";
     public static final String SWIPE_PAN_SENSITIVITY = "IGVX.SWIPE_PAN_SENSITIVITY";
+
+    // IGV-X: whether the user has dismissed the Welcome-panel hint about
+    // enabling double-click-to-open for .xml session files (one-time nag).
+    public static final String XML_ASSOC_HINT_DISMISSED = "IGVX.XmlAssocHintDismissed";
     public static final String DEFAULT_VISIBILITY_WINDOW = "DEFAULT_VISIBILITY_WINDOW";
     public static final String EXPAND_FEAUTRE_TRACKS = "EXPAND_FEATURE_TRACKS";
     public static final String IGV_PLUGIN_LIST_KEY = "IGV_PLUGIN_LIST";

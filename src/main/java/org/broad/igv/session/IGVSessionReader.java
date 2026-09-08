@@ -550,7 +550,15 @@ public class IGVSessionReader implements SessionReader {
 
         ResourceLocator resourceLocator = new ResourceLocator(serverURL, absolutePath);
 
-        if (index != null) resourceLocator.setIndexPath(index);
+        // IGV-X: resolve a relative index path against the session's directory,
+        // same as path/coverage/mapping below -- without this, a session
+        // written with a relative index="..." (SessionWriter now emits one)
+        // would store that relative string verbatim as the index path, which
+        // downstream code expects to already be directly usable.
+        if (index != null) {
+            String absoluteIndexPath = index.equals(".") ? index : getAbsolutePath(index, sessionPath);
+            resourceLocator.setIndexPath(absoluteIndexPath);
+        }
 
         if (coverage != null) {
             String absoluteCoveragePath = coverage.equals(".") ? coverage : getAbsolutePath(coverage, sessionPath);
@@ -590,7 +598,11 @@ public class IGVSessionReader implements SessionReader {
         if (type != null && !type.equals("local")) {
             resourceLocator.setFormat(type);
         }
-        resourceLocator.setCoverage(coverage);
+        // IGV-X: removed a redundant resourceLocator.setCoverage(coverage) here --
+        // it clobbered the already-resolved absolute coverage path set above
+        // (line ~565) with the raw, possibly-relative attribute string,
+        // silently breaking coverage-file loading for any session with a
+        // relative coverage="..." path.
         resourceLocator.setTrackLine(trackLine);
 
         if (colorString != null) {

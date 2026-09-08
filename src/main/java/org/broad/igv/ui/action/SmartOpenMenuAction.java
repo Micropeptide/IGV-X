@@ -113,10 +113,26 @@ public class SmartOpenMenuAction extends MenuAction {
             // Sessions load in background; tracks use loadTracks (async internally)
             for (ResourceLocator locator : sessions) {
                 LongRunningTask.submit(() -> {
+                    boolean success = false;
                     try {
-                        igv.loadSession(locator.getPath(), null);
+                        success = igv.loadSession(locator.getPath(), null);
                     } catch (Exception ex) {
                         log.error("Error opening session " + locator.getPath(), ex);
+                    } finally {
+                        // IGV-X: a session opened this way (Finder Open With/
+                        // double-click, drag-and-drop) suppresses the
+                        // cold-launch Welcome panel entirely (see
+                        // DesktopIntegration.hasSeenOpenFileEvent) on the
+                        // expectation that this load will show real data
+                        // instead. If it failed or the session turned out
+                        // empty, nothing else will ever show the Welcome
+                        // panel again for this launch -- surface it now so
+                        // the user isn't left looking at a permanently blank
+                        // window with no way back to Recent Files/Sessions.
+                        if ((!success || igv.getAllTracks().isEmpty())) {
+                            org.broad.igv.ui.util.UIUtilities.invokeOnEventThread(() ->
+                                    igv.getContentPane().showWelcomePanel(true));
+                        }
                     }
                 });
             }

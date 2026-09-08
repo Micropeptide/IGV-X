@@ -3,12 +3,26 @@
 How IGV-X handles session files (`.xml` IGV sessions and the planned
 `.igvx.json` companion), relative paths, and backward compatibility.
 
-## 1. Current state (2026-08-10)
+## 1. Current state (updated 2026-09-07)
 
 IGV-X is built on upstream IGV 2.19.X and inherits its session format and
-loading machinery. The charter's session work is planned but **not yet
-implemented**; this document records the design and compatibility
-constraints so implementation is a well-specified task.
+loading machinery. The charter's session work (relative paths by default,
+`.igvx.json` companion) landed in commits c52d4cc85 / 74f79c9e1 / 166efd284
+(2026-08-10 through 2026-08-15) and is **implemented** — sections 3-4 below
+describe the shipped design, not a plan.
+
+Verified end-to-end 2026-09-07 (real app build, real bigWig track, real
+Finder interaction — not just a code read):
+- A saved session's `<Resource path=...>` **and** `<Track id=...>` are both
+  relative when the data file lives under the session's directory. (A
+  latent bug had `Track/@id` silently staying absolute even though
+  `Resource/@path` was correct — see CHANGELOG.md "Fixed", 2026-09-07.)
+- Relative-path computation is robust to a symlinked directory in the path
+  (e.g. an iCloud Drive-backed `~/Desktop`/`~/Documents`) on either side.
+- Double-click and Finder right-click > Open With > IGV-X on a `.xml`
+  session file both load it correctly in a locally-built app.
+- Dropping a file anywhere on the main window (not just the track data
+  area) loads it.
 
 ## 2. Design goals (charter)
 

@@ -15,7 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * IGV-X: optional companion metadata for session files (.igvx.json).
@@ -97,6 +99,20 @@ public class SessionMetadata {
     public static void write(File sessionFile, String genomeId, String locus,
                              int trackCount, List<String> resourcePaths,
                              boolean relativePaths, JsonArray history) {
+        write(sessionFile, genomeId, locus, trackCount, resourcePaths, relativePaths, history, null);
+    }
+
+    /**
+     * Write the companion metadata, additionally recording each local
+     * resource's last-modified time (keyed by the same path string as
+     * {@code resourcePaths}, so it resolves against the session directory
+     * exactly the same way) so a later load can warn if a file changed on
+     * disk since this save. {@code resourceMtimes} may be null or omit
+     * entries (e.g. remote URLs) -- best-effort, never required.
+     */
+    public static void write(File sessionFile, String genomeId, String locus,
+                             int trackCount, List<String> resourcePaths,
+                             boolean relativePaths, JsonArray history, Map<String, Long> resourceMtimes) {
         if (sessionFile == null) {
             return;
         }
@@ -120,6 +136,13 @@ public class SessionMetadata {
                 }
                 root.add("resources", arr);
             }
+            if (resourceMtimes != null && !resourceMtimes.isEmpty()) {
+                JsonObject mtimeObj = new JsonObject();
+                for (Map.Entry<String, Long> entry : resourceMtimes.entrySet()) {
+                    mtimeObj.addProperty(entry.getKey(), entry.getValue());
+                }
+                root.add("resourceMtimes", mtimeObj);
+            }
             if (history != null && history.size() > 0) {
                 root.add("history", history);
             }
@@ -130,6 +153,35 @@ public class SessionMetadata {
         } catch (Exception e) {
             log.warn("IGV-X: could not write session companion metadata", e);
         }
+    }
+
+    /**
+     * Best-effort check: which resource paths (as recorded at save time, same
+     * spelling as the "resources" array) point to a file that now has a
+     * different last-modified time than when this session was saved? Returns
+     * an empty list when there's no companion, no recorded mtimes, or nothing
+     * changed -- never throws.
+     */
+    public static List<String> findChangedResources(String sessionPath) {
+        List<String> changed = new ArrayList<>();
+        try {
+            JsonObject meta = read(sessionPath);
+            if (meta == null || !meta.has("resourceMtimes")) {
+                return changed;
+            }
+            JsonObject mtimes = meta.getAsJsonObject("resourceMtimes");
+            for (String key : mtimes.keySet()) {
+                long recorded = mtimes.get(key).getAsLong();
+                String absolute = FileUtils.isRemote(key) ? key : FileUtils.getAbsolutePath(key, sessionPath);
+                File f = new File(absolute);
+                if (f.exists() && f.lastModified() != recorded) {
+                    changed.add(key);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("IGV-X: could not check for changed session resources", e);
+        }
+        return changed;
     }
 
     /**
